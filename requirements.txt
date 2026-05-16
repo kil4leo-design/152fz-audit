@@ -1,0 +1,22 @@
+# Сканирование
+playwright==1.44.0
+
+# API
+fastapi==0.111.0
+uvicorn==0.30.0
+
+# Парсинг
+beautifulsoup4==4.12.3
+
+# Конфиг
+pyyaml==6.0.1
+
+# БД
+sqlalchemy==2.0.30
+
+# Тесты
+pytest==8.2.0
+pytest-asyncio==0.23.7
+
+# Линтер
+ruff==0.4.4
