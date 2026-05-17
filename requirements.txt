@@ -1,15 +1,19 @@
 # Сканирование
 playwright==1.44.0
 
+# Парсинг HTML
+beautifulsoup4==4.12.3
+
 # API
 fastapi==0.111.0
 uvicorn==0.30.0
+httpx==0.27.0
 
-# Парсинг
-beautifulsoup4==4.12.3
-
-# Конфиг
+# Конфиг / Law Base
 pyyaml==6.0.1
+
+# Law Monitor — мониторинг законов
+feedparser==6.0.11
 
 # БД
 sqlalchemy==2.0.30
