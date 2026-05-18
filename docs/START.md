@@ -51,12 +51,13 @@ https://github.com/kil4leo-design/152fz-audit
 
 **Завершены:**
 - Этап 0 — Инфраструктура (репозиторий, CI, ветки, шаблоны)
-- Law Base MVP — A.yaml, B.yaml, C.yaml, sources.yaml верифицированы и загружены
+- Law Base MVP — A.yaml, B.yaml, C.yaml, sources.yaml верифицированы, прошли два внешних аудита (Kimi, DeepSeek), исправлены
 - Law Monitor — архитектура зафиксирована в decisions.md (publication.pravo.gov.ru API + RSS)
+- architecture.md — полная архитектура: PlaywrightWrapper, network_log, DetectorEngine, disclaimer, валидация YAML
 
 **В работе:**
-- Этап 1 — Detector Engine (следующий шаг)
-- Следующий шаг: реализовать base.py, фабричный паттерн, первый детектор A1
+- Этап 1 — Detector Engine
+- Следующий шаг: реализовать scanner/detectors/base.py, фабричный паттерн в engine.py, первый детектор A1
 
 **Открытые вопросы:**
 - D1 (HTTPS) — в TODO, требует подтверждения правоприменительной практики
