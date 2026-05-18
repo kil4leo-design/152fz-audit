@@ -4,16 +4,23 @@
 # Редакция: с учётом ФЗ-420 от 30.11.2024 (вступил в силу 30.05.2025)
 # Источник норм: 152-ФЗ «О персональных данных»
 #
-# Примечание по ИП (ФЗ-420, примечание к ст.13.11 в целом):
-# С 30.05.2025 ИП несут ответственность по ст.13.11 как юридические лица
-# по всем частям, где ИП не указаны отдельно в тексте закона.
-# Для ч.1 (C1) и ч.8 (C2) ИП в тексте закона не указаны → ИП = юрлицо.
+# Примечание по ИП: С 30.05.2025 ИП = юрлицо по ч.1 и ч.8 ст.13.11
+# (ИП не указаны отдельно в тексте закона).
 #
+# ВАЖНО: C1 и C2 требуют network_analysis через Playwright network interception.
+# Статический анализ HTML недостаточен — баннер может существовать,
+# но аналитика загружаться до нажатия «Принять». Без перехвата сети
+# детектор даёт недостоверный результат.
+#
+# Списки сигнатур требуют регулярного обновления по мере появления
+# новых аналитических сервисов. Дата последнего обновления указана ниже.
 # Дата верификации: 2026-05-17
+# Дата обновления сигнатур: 2026-05-17
 
 violations:
 
   - id: "C1"
+    version: "1.1.0"
     name: "Сбор аналитики и cookie без согласия пользователя"
     block: "C"
     enabled: true
@@ -34,14 +41,34 @@ violations:
     detector:
       method: "html_cookie_banner_missing"
       params:
+        # Сигнатуры аналитики в HTML (статический анализ)
         analytics_signatures:
+          # Яндекс
           - "ym("
           - "yandex_metrika"
           - "_ym_"
+          - "mc.yandex.ru"
+          - "metrika.yandex.ru"
+          # Google
           - "gtag("
           - "google-analytics"
+          - "google-analytics.com"
+          - "googletagmanager.com"
+          - "google_analytics"
+          # VK / Mail.ru
           - "top.mail.ru"
           - "vk.com/js/api"
+          - "vk.com/js/script"
+          # TikTok
+          - "analytics.tiktok.com"
+          - "ttq."
+          # Другие
+          - "segment.io"
+          - "segment.com"
+          - "mixpanel.com"
+          - "amplitude.com"
+          - "cloudflareinsights.com"
+        # Селекторы для поиска баннера в DOM
         banner_selectors:
           - "#cookie-banner"
           - "#cookie-consent"
@@ -51,20 +78,81 @@ violations:
           - ".cookie-notice"
           - "[data-cookie]"
           - "[data-consent]"
+          - "[data-gdpr]"
+          - "[data-cookie-policy]"
+          - "#consent"
+          - ".gdpr"
+          - "#gdpr"
+          - ".privacy-popup"
+          - "#privacy-popup"
+          - "#CybotCookiebotDialog"
+          - "#onetrust-consent-sdk"
+          - "#osano-cm"
+        # Ключевые слова в тексте баннера
         banner_keywords:
           - "cookie"
           - "куки"
           - "файлы cookie"
           - "используем файлы"
+          - "файлы для идентификации"
+          - "используем технологии"
+          - "мы собираем"
+          - "согласие на обработку"
+          - "ваши данные"
+        # Network analysis (обязателен для достоверного результата)
+        # Проверяет фактическую загрузку аналитических запросов ДО согласия
+        network_analysis:
+          enabled: true
+          # Домены аналитики для перехвата сетевых запросов
+          intercept_domains:
+            - "google-analytics.com"
+            - "googletagmanager.com"
+            - "mc.yandex.ru"
+            - "metrika.yandex.ru"
+            - "top.mail.ru"
+            - "analytics.tiktok.com"
+            - "segment.io"
+            - "mixpanel.com"
+            - "amplitude.com"
+            - "cloudflareinsights.com"
+          # Если аналитика загружается до взаимодействия с баннером — нарушение
+          check_analytics_before_consent: true
+        # Функциональность баннера (через Playwright DOM)
+        # Баннер должен содержать минимум 2 из 3 групп кнопок
+        # Каждая группа — список синонимов для одного типа действия
+        verify_functional:
+          min_buttons_required: 2
+          button_groups:
+            accept:
+              - "принять"
+              - "accept"
+              - "agree"
+              - "ok"
+              - "хорошо"
+            reject:
+              - "отклонить"
+              - "reject"
+              - "decline"
+              - "refuse"
+              - "не согласен"
+              - "отказаться"
+            settings:
+              - "настройки"
+              - "settings"
+              - "configure"
+              - "manage"
+              - "выбрать"
+              - "подробнее" 
     fix:
       summary: "Установить cookie-баннер с запросом согласия при первом визите"
       steps:
         - "Установить cookie-баннер, который отображается при первом посещении сайта"
-        - "Баннер должен содержать кнопку «Принять» и кнопку «Отклонить» или «Настроить»"
-        - "Аналитические счётчики должны активироваться только после получения согласия"
+        - "Баннер должен содержать кнопку «Принять» И кнопку «Отклонить» или «Настроить» — только «Принять» недостаточно"
+        - "Аналитические счётчики должны активироваться ТОЛЬКО после нажатия «Принять»"
         - "Выбор пользователя должен сохраняться и не запрашиваться повторно при следующих визитах"
 
   - id: "C2"
+    version: "1.1.0"
     name: "Использование зарубежных счётчиков аналитики — нарушение локализации ПДн"
     block: "C"
     enabled: true
@@ -85,15 +173,52 @@ violations:
     detector:
       method: "html_foreign_analytics"
       params:
+        # Статические сигнатуры в HTML
         foreign_signatures:
+          # Google
           - "google-analytics.com"
           - "googletagmanager.com"
           - "gtag("
           - "google_analytics"
+          - "analytics.google.com"
+          - "doubleclick.net"
+          - "googleadservices.com"
+          # Facebook/Meta
           - "connect.facebook.net"
           - "fbq("
-          - "hotjar.com"
+          - "facebook.com/tr"
+          # Microsoft
           - "clarity.ms"
+          # Hotjar
+          - "hotjar.com"
+          - "hotjar.io"
+          # Другие зарубежные
+          - "segment.io"
+          - "segment.com"
+          - "mixpanel.com"
+          - "amplitude.com"
+          - "intercom.io"
+          - "hubspot.com"
+          - "cloudflareinsights.com"
+          - "analytics.tiktok.com"
+        # Российские сервисы — исключения (не являются нарушением)
+        whitelist_signatures:
+          - "mc.yandex.ru"
+          - "metrika.yandex.ru"
+          - "top.mail.ru"
+          - "vk.com"
+          - "roistat.com"
+          - "calltouch.ru"
+          - "comagic.ru"
+        # Network analysis: перехват фактических запросов
+        # Ловит случаи проксирования через свой домен и server-side tagging
+        network_analysis:
+          enabled: true
+          intercept_foreign_requests: true
+          # Если запрос уходит на зарубежный домен — фиксируем как нарушение
+          # Если домен неизвестен — помечаем как warning для ручной проверки
+          uncertain_severity: "warning"
+          uncertain_message: "Обнаружен запрос к неизвестному домену, требуется ручная проверка"
     fix:
       summary: "Заменить зарубежные счётчики на российские аналоги"
       steps:

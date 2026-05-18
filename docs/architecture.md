@@ -18,32 +18,33 @@
     │  URL
     ▼
 [Scanner]
-    ├── [Playwright Wrapper] — загружает страницу, возвращает HTML
+    ├── robots.txt check — перед любым сканированием
+    ├── [Playwright Wrapper] — загружает страницу + перехватывает сеть
     │        │
-    │        ▼ HTML
-    │   [BeautifulSoup] — парсит HTML в дерево
-    │        │
-    │        ▼ soup
+    │        ├── HTML (после networkidle + 2s timeout)
+    │        └── network_log (все исходящие запросы)
+    │             │
+    │        [BeautifulSoup] — парсит HTML в дерево (soup)
+    │             │
     └── [Detector Engine] — прогоняет детекторы
              │
-             ├── [Detector A1] ──┐
-             ├── [Detector B1] ──┤
-             ├── [Detector B2] ──┼── читает [Law Base / YAML]
-             ├── [Detector B3] ──┤
-             ├── [Detector C1] ──┤
-             └── [Detector C2] ──┘
+             ├── [Detector A1] ──── soup + network_log → использует soup
+             ├── [Detector B1] ──── soup + network_log → использует soup
+             ├── [Detector B2] ──── soup + network_log → использует soup
+             ├── [Detector B3] ──── soup + network_log → использует soup
+             ├── [Detector C1] ──── soup + network_log → использует ОБА
+             └── [Detector C2] ──── soup + network_log → использует ОБА
                       │
-                      ▼ список нарушений
+                      ▼ список нарушений + evidence
              [Report Engine]
                       │
-                      ▼ отчёт (JSON / HTML)
+                      ▼ отчёт (JSON / HTML) + disclaimer
              [API — FastAPI]
                       │
                       ▼
              [UI — React]
-                      │
-                      ▼
-             [DB — SQLite] — сохранение истории
+
+[post-MVP] [DB — SQLite] — история проверок (модуль History)
 
 [Law Monitor] — независимый процесс (GitHub Actions, раз в месяц)
     ├── fetcher.py — опрашивает publication.pravo.gov.ru API/RSS
@@ -71,70 +72,127 @@ Dispatch по полю `detector.method` из YAML, не по `id`. Реестр
 | `html_cookie_banner_missing` | `HtmlCookieBannerMissingDetector` | `scanner/detectors/html_cookie_banner_missing.py` |
 | `html_foreign_analytics` | `HtmlForeignAnalyticsDetector` | `scanner/detectors/html_foreign_analytics.py` |
 
-**Playwright + BeautifulSoup — разделение ответственности.**
-- Playwright: загрузка страницы с полным JS-рендерингом, получение итогового HTML
-- BeautifulSoup: парсинг HTML в дерево для детекторов
-- Детекторы работают с объектом `soup` (BeautifulSoup), не с Playwright напрямую
+**Playwright — единственный режим работы.**
+PlaywrightWrapper ВСЕГДА:
+1. Проверяет robots.txt перед загрузкой страницы
+2. Ждёт `networkidle` + 2 секунды timeout для динамического контента
+3. Перехватывает ВСЕ исходящие сетевые запросы (network_log)
+4. Возвращает (html, network_log) — оба значения всегда
+
+A/B детекторы игнорируют network_log. C детекторы используют оба.
+Это проще чем два режима и не создаёт значимых накладных расходов.
+
+**C1 — важно: network interception без взаимодействия пользователя.**
+PlaywrightWrapper загружает страницу и немедленно собирает network_log.
+Никаких кликов, никакого взаимодействия с баннером.
+Это эмулирует первый визит пользователя: если аналитика загружается сразу —
+это нарушение (данные собираются до согласия).
+Детектор C1 проверяет: есть ли запросы к аналитическим доменам в network_log
+ДО любого взаимодействия пользователя.
+
+**Сигнатура метода детектора:**
+```python
+def detect(self, soup: BeautifulSoup, network_log: list[dict]) -> list[dict]:
+```
+Возвращает [] или список нарушений. Никогда не бросает исключение наружу.
 
 **Law Base — единственный источник правил.**
 Детекторы читают параметры из YAML (keywords, selectors, pd_fields и т.д.).
 Изменение правила = изменение YAML, не кода детектора.
 
 **Один детектор — одна ответственность.**
-Каждый детектор проверяет ровно одно нарушение. Результат: список нарушений или пустой список.
+Каждый детектор проверяет ровно одно нарушение. Результат: [] или список нарушений.
+
+**Общие параметры (pd_fields) — управление дублированием.**
+pd_fields идентичен в B1, B2, B3. Дублирование в YAML — сознательное решение для простоты.
+Риск: при обновлении одного файла другие могут остаться устаревшими.
+Правило: при изменении pd_fields — обновлять все три файла (B1, B2, B3) в одном коммите.
+Долгосрочно: вынести в `law_base/shared_params.yaml` и загружать в DetectorEngine.
+
+**Зависимости между детекторами.**
+B1 (предустановленный чекбокс) запускается только если форма с ПДн найдена.
+B2 (нет чекбокса) и B1 (предустановлен) взаимоисключающие для одной формы:
+- Если форма без чекбокса → B2 срабатывает, B1 для этой формы не проверяется
+- Если чекбокс есть и предустановлен → B1 срабатывает
+Движок должен передавать контекст найденных форм между детекторами блока B.
+
+---
+
+## PlaywrightWrapper — обязательное поведение
+
+```python
+async def scan(url: str) -> tuple[str, list[dict]]:
+    # 1. Проверить robots.txt
+    if not robots_allowed(url):
+        raise RobotsDisallowedError(url)
+
+    # 2. Настроить перехват сети
+    network_log = []
+    page.on("request", lambda req: network_log.append({
+        "url": req.url,
+        "domain": extract_domain(req.url),
+        "timestamp": time.time()
+    }))
+
+    # 3. Загрузить страницу
+    await page.goto(url, wait_until="networkidle", timeout=30000)
+    await page.wait_for_timeout(2000)  # динамический контент
+
+    # 4. Вернуть HTML + network_log
+    html = await page.content()
+    return html, network_log
+```
+
+**Обязательные заголовки:**
+```python
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; 152fz-audit/1.0; +https://github.com/kil4leo-design/152fz-audit)"
+}
+```
+
+**Rate limiting:** минимум 2 секунды между запросами к одному домену.
 
 ---
 
 ## Поток данных — полный цикл
 
 ```
-1. Пользователь вводит URL в UI
-2. UI → POST /scan → FastAPI
-3. FastAPI → Scanner.scan(url)
-4. Scanner → PlaywrightWrapper.get_html(url) → HTML строка
-5. Scanner → BeautifulSoup(html) → soup объект
-6. Scanner → DetectorEngine.run_all(soup, config)
-7. DetectorEngine читает law_base/blocks/*.yaml
-8. DetectorEngine → для каждого enabled детектора → detector.detect(soup)
-9. Детектор возвращает [] или [{"id", "name", "severity", "fine", "fix", ...}]
-10. DetectorEngine собирает все результаты
-11. Scanner возвращает список нарушений в FastAPI
+1.  Пользователь вводит URL в UI
+2.  UI → POST /scan → FastAPI
+3.  FastAPI → Scanner.scan(url)
+4.  Scanner → robots.txt check (если запрещён → вернуть ошибку)
+5.  Scanner → PlaywrightWrapper.scan(url) → (html, network_log)
+6.  Scanner → BeautifulSoup(html) → soup
+7.  Scanner → DetectorEngine.run_all(soup, network_log, config)
+8.  DetectorEngine читает law_base/blocks/*.yaml
+9.  DetectorEngine → для каждого enabled детектора:
+    a. detector.detect(soup, network_log) → результат
+    b. Если детектор упал → логируем, продолжаем следующий
+10. Движок применяет зависимости (B1/B2 логика)
+11. Scanner возвращает список нарушений + evidence в FastAPI
 12. FastAPI → ReportEngine.build(violations) → отчёт JSON + HTML
-13. [post-MVP] FastAPI сохраняет результат в DB (история — модуль History)
-14. FastAPI возвращает отчёт в UI
-15. UI отображает нарушения / рекомендации
-```
-
----
-
-## Law Monitor — поток данных
-
-```
-1. GitHub Actions запускает scheduler.py раз в месяц
-2. fetcher.py → GET publication.pravo.gov.ru/api/ (фильтр: 152-ФЗ, КоАП 13.11)
-3. Если новых документов нет → лог "no changes", завершение
-4. Если есть → parser.py извлекает текст закона
-5. analyzer.py → передаёт текст в Anthropic API
-6. AI возвращает: что изменилось + предложения правок в YAML
-7. notifier.py → отправляет email/уведомление оператору
-8. Оператор проверяет и подтверждает правки вручную
-9. После подтверждения — обновление law_base/blocks/*.yaml → коммит → деплой
+13. Отчёт содержит обязательный disclaimer (см. ниже)
+14. [post-MVP] FastAPI сохраняет результат в DB (история)
+15. FastAPI возвращает отчёт в UI
+16. UI отображает нарушения / рекомендации
 ```
 
 ---
 
 ## Структура результата детектора
 
-Каждый детектор возвращает список объектов:
-
 ```python
 [
     {
         "id": "A1",
+        "version": "1.1.0",          # версия критерия из YAML
         "name": "Отсутствует политика обработки персональных данных",
-        "severity": "critical",
+        "severity": "critical",       # critical | warning | info
         "is_recommendation": False,
-        "legal_ref": {"law": "152-ФЗ", "article": "ст. 18.1 ч.2"},
+        "legal_ref": {
+            "law": "152-ФЗ",
+            "article": "ст. 18.1 ч.2"
+        },
         "fine": {
             "article": "ч.3 ст.13.11",
             "amounts": {
@@ -148,7 +206,55 @@ Dispatch по полю `detector.method` из YAML, не по `id`. Реестр
             "summary": "...",
             "steps": ["...", "..."]
         },
-        "evidence": "..."  # что именно найдено / не найдено на странице
+        "evidence": {
+            "found": False,
+            "detail": "Ссылка с ключевыми словами не найдена в footer, header, nav, body",
+            "checked_urls": [],       # для A1: какие URL проверены
+            "network_requests": []    # для C1/C2: какие запросы перехвачены
+        }
     }
 ]
+```
+
+---
+
+## Обязательный disclaimer в отчёте
+
+Каждый отчёт должен содержать:
+
+```
+ВАЖНО: Инструмент проверяет публичный HTML и сетевые запросы страницы.
+Результаты не являются юридическим заключением.
+Инструмент не проверяет: серверную логику, базы данных, внутренние документы,
+фактическое соблюдение требований к хранению данных.
+Для полного аудита обратитесь к юристу, специализирующемуся на 152-ФЗ.
+```
+
+Это защищает бизнес юридически и формирует правильные ожидания клиента.
+
+---
+
+## Валидация YAML при загрузке
+
+При старте приложения DetectorEngine валидирует все YAML-файлы:
+- Обязательные поля: id, version, name, enabled, severity, legal_ref, fine, detector.method
+- detector.method должен быть в реестре детекторов
+- Если валидация не прошла — приложение не запускается, выводит ошибку
+
+Реализовать через Pydantic-модель или JSON Schema (выбрать при реализации).
+
+---
+
+## Law Monitor — поток данных
+
+```
+1. GitHub Actions запускает scheduler.py раз в месяц
+2. fetcher.py → GET publication.pravo.gov.ru/api/ (фильтр: 152-ФЗ, КоАП 13.11)
+3. Если новых документов нет → лог "no changes", завершение
+4. Если есть → parser.py извлекает текст закона
+5. analyzer.py → передаёт текст в Anthropic API
+6. AI возвращает: что изменилось + предложения правок в YAML
+7. notifier.py → отправляет уведомление оператору
+8. Оператор проверяет и подтверждает правки вручную
+9. После подтверждения → обновление law_base/blocks/*.yaml → коммит → деплой
 ```
