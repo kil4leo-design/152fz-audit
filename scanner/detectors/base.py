@@ -1,6 +1,4 @@
 """
-cat > ~/Downloads/outputs/scanner/detectors/base.py << 'EOF'
-
 scanner/detectors/base.py — Базовый класс детектора нарушений 152-ФЗ.
 
 Контракт:
@@ -56,9 +54,9 @@ class BaseDetector(ABC):
         Собрать стандартный словарь нарушения из конфига + доказательная база.
 
         Предусловие: violation_config прошёл Pydantic-валидацию в DetectorEngine.
-        Поля id, version, name, severity, legal_ref, fine, fix — обязательные в YAML,
-        гарантированно присутствуют в сыром словаре после валидации.
-        Поле is_recommendation имеет default False в Pydantic — может отсутствовать в YAML.
+        Обязательные поля (прямой доступ): id, version, name, severity,
+                                            legal_ref, fine, fix.
+        С default в Pydantic (через .get()): is_recommendation.
 
         Формат evidence зависит от детектора:
         - A1: {"found": bool, "detail": str, "checked_urls": list}
@@ -79,7 +77,3 @@ class BaseDetector(ABC):
             "fix": cfg["fix"],
             "evidence": evidence,
         }
-"""
-EOF
-echo "base.py written"
-"""

@@ -1,8 +1,4 @@
 """
-bash
-
-cat > /mnt/user-data/outputs/scanner/engine.py << 'EOF'
-
 scanner/engine.py — Detector Engine.
 
 Ответственности:
@@ -33,7 +29,7 @@ from pydantic import BaseModel, ValidationError
 from scanner.detectors.base import BaseDetector
 
 # BeautifulSoup используется только в аннотациях — не нужен в runtime.
-# from __future__ import annotations превращает все аннотации в строки.
+# from __future__ import annotations превращает аннотации в строки.
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup
 
@@ -67,10 +63,7 @@ class _Fine(BaseModel):
 
 
 class _Fix(BaseModel):
-    """
-    Структура блока fix — обязательна для всех нарушений в Law Base.
-    Поля без defaults: отсутствие summary или steps в YAML → ошибка валидации.
-    """
+    """Валидирует структуру блока fix. Оба поля обязательны — дефолтов нет."""
     summary: str
     steps: list[str]
 
@@ -101,12 +94,11 @@ class _ViolationConfig(BaseModel):
 # Реестр методов зафиксирован в architecture.md → таблица "Реестр методов".
 #
 # АКТИВАЦИЯ НОВОГО ДЕТЕКТОРА — два шага обязательно вместе:
-#   Шаг 1: раскомментировать import ниже
-#   Шаг 2: раскомментировать строку в DETECTOR_REGISTRY
-#
-# Нарушение порядка:
-#   Только шаг 1 (импорт без реестра) → детектор импортирован, но никогда не вызовется
-#   Только шаг 2 (реестр без импорта) → NameError при старте приложения
+#   1. Раскомментировать import ниже
+#   2. Раскомментировать строку в DETECTOR_REGISTRY
+# Если сделать только один шаг:
+#   - реестр без импорта  → NameError при старте (имя класса не определено)
+#   - импорт без реестра  → нет ошибки, но детектор молча не запускается
 
 # from scanner.detectors.html_link_search import HtmlLinkSearchDetector
 # from scanner.detectors.html_checkbox_prechecked import HtmlCheckboxPrecheckedDetector
@@ -147,7 +139,7 @@ class DetectorEngine:
 
         Raises:
             RuntimeError: если директория пуста, YAML не читается
-                          или нарушение не проходит валидацию
+                          или нарушение не проходит Pydantic-валидацию
 
         Returns:
             Список сырых словарей нарушений (enabled + метод в реестре).
@@ -257,10 +249,3 @@ class DetectorEngine:
                 logger.exception("Детектор %s упал, продолжаем", vid)
 
         return results
-"""
-EOF
-echo "engine.py written"
-Output
-
-engine.py written
-"""
