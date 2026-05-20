@@ -32,6 +32,7 @@
 - Штрафы и нормы закона — только из первоисточника (КонсультантПлюс), не из вторичных статей
 - При любом сомнении в юридической части — проверять и сообщать о сомнении явно
 - Один модуль = одна сессия
+- **Перед отправкой — все изменения в черновике, полный независимый аудит построчно, только потом отдавать**
 - **Перед отправкой ответа — проверить полноту:** если задача затрагивает несколько файлов, все они должны быть обновлены. Частичное выполнение = ошибка.
 
 ---
@@ -53,22 +54,28 @@ https://github.com/kil4leo-design/152fz-audit
 - Law Base MVP — A.yaml, B.yaml, C.yaml, sources.yaml верифицированы
 - Law Monitor — архитектура зафиксирована в decisions.md
 - architecture.md — полная архитектура системы
-- `scanner/detectors/base.py` — абстрактный BaseDetector
-- `scanner/engine.py` — DetectorEngine: Pydantic-валидация YAML, фабричный паттерн, run_all()
-- `scanner/__init__.py`, `scanner/detectors/__init__.py` — Python-пакеты (fix ImportError)
+- `scanner/__init__.py`, `scanner/detectors/__init__.py` — Python-пакеты
+- `scanner/detectors/base.py` — абстрактный BaseDetector (прошёл 2 раунда аудита)
+- `scanner/engine.py` — DetectorEngine: Pydantic-валидация, фабричный паттерн, run_all() (прошёл 2 раунда аудита)
 - `requirements.txt` — pydantic>=2.0 зафиксирован явно
-- CHANGELOG.md — заполнен
-- decisions.md — добавлены TODO: pd_fields дублирование, test.yml || true
+- CHANGELOG.md, decisions.md (TODO) — обновлены
+
+**Состояние engine.py и base.py (важно для следующей сессии):**
+- `_Fix` — оба поля обязательны (`summary: str`, `steps: list[str]`), дефолтов нет
+- `_ViolationConfig.fix: _Fix` — без дефолта, обязателен в YAML
+- `_build_result`: обязательные поля через прямой доступ `cfg[x]`; `is_recommendation` через `cfg.get(x, False)`
+- `BeautifulSoup` под `TYPE_CHECKING` в обоих файлах
+- `DETECTOR_REGISTRY` пуст — все детекторы закомментированы, активация требует двух шагов одновременно
 
 **В работе:**
 - Этап 1 — Detector Engine
-- Следующий шаг: первый детектор A1 → `scanner/detectors/html_link_search.py` + тесты
+- Следующий шаг: первый детектор A1 → `scanner/detectors/html_link_search.py` + два теста
 
 **Открытые вопросы:**
-- D1 (HTTPS) — в TODO, требует подтверждения правоприменительной практики
-- E1 (уведомление РКН) — в TODO, требует решения технической проблемы доступа к реестру
-- 149-ФЗ — в TODO, проверить на применимость после MVP
-- Law Monitor: diff редакций — в TODO
-- Law Monitor: graph/ontology — в TODO
-- pd_fields дублирование B1/B2/B3 — в TODO, долгосрочно вынести в shared_params.yaml
-- test.yml: убрать || true после написания первых тестов
+- D1 (HTTPS) — в TODO
+- E1 (уведомление РКН) — в TODO
+- 149-ФЗ — в TODO
+- Law Monitor: diff редакций, graph/ontology — в TODO
+- pd_fields дублирование B1/B2/B3 — в TODO
+- test.yml: убрать `|| true` после первых тестов — в TODO
+- B1/B2 зависимость в run_all — TODO внутри engine.py, реализовать при написании B-детекторов
