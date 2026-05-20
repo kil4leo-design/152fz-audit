@@ -1,4 +1,8 @@
 """
+bash
+
+cat > /mnt/user-data/outputs/scanner/engine.py << 'EOF'
+
 scanner/engine.py — Detector Engine.
 
 Ответственности:
@@ -21,13 +25,17 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import yaml
-from bs4 import BeautifulSoup
 from pydantic import BaseModel, ValidationError
 
 from scanner.detectors.base import BaseDetector
+
+# BeautifulSoup используется только в аннотациях — не нужен в runtime.
+# from __future__ import annotations превращает все аннотации в строки.
+if TYPE_CHECKING:
+    from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +45,7 @@ _LAW_BASE_DIR = Path(__file__).parent.parent / "law_base" / "blocks"
 
 # ── Pydantic-схема валидации YAML ─────────────────────────────────────────────
 # Валидирует обязательные поля из architecture.md:
-# id, version, name, enabled, severity, legal_ref, fine, detector.method
+# id, version, name, enabled, severity, legal_ref, fine, detector.method, fix
 
 class _LegalRef(BaseModel):
     law: str
@@ -58,6 +66,15 @@ class _Fine(BaseModel):
     amounts: _FineAmounts
 
 
+class _Fix(BaseModel):
+    """
+    Структура блока fix — обязательна для всех нарушений в Law Base.
+    Поля без defaults: отсутствие summary или steps в YAML → ошибка валидации.
+    """
+    summary: str
+    steps: list[str]
+
+
 class _DetectorConfig(BaseModel):
     method: str
     params: dict = {}
@@ -74,15 +91,22 @@ class _ViolationConfig(BaseModel):
     legal_ref: _LegalRef
     fine: _Fine
     detector: _DetectorConfig
-    fix: dict = {}
+    fix: _Fix
 
 
 # ── Реестр детекторов ─────────────────────────────────────────────────────────
 # Ключ   — значение поля detector.method из YAML
 # Значение — класс детектора (подкласс BaseDetector)
 #
-# Импорты раскомментируются по мере реализации детекторов в Этапе 1.
 # Реестр методов зафиксирован в architecture.md → таблица "Реестр методов".
+#
+# АКТИВАЦИЯ НОВОГО ДЕТЕКТОРА — два шага обязательно вместе:
+#   Шаг 1: раскомментировать import ниже
+#   Шаг 2: раскомментировать строку в DETECTOR_REGISTRY
+#
+# Нарушение порядка:
+#   Только шаг 1 (импорт без реестра) → детектор импортирован, но никогда не вызовется
+#   Только шаг 2 (реестр без импорта) → NameError при старте приложения
 
 # from scanner.detectors.html_link_search import HtmlLinkSearchDetector
 # from scanner.detectors.html_checkbox_prechecked import HtmlCheckboxPrecheckedDetector
@@ -122,15 +146,15 @@ class DetectorEngine:
         Валидирует каждое нарушение через Pydantic.
 
         Raises:
-            FileNotFoundError: если директория пуста
-            RuntimeError: если YAML не читается или не проходит валидацию
+            RuntimeError: если директория пуста, YAML не читается
+                          или нарушение не проходит валидацию
 
         Returns:
             Список сырых словарей нарушений (enabled + метод в реестре).
         """
         yaml_files = sorted(_LAW_BASE_DIR.glob("*.yaml"))
         if not yaml_files:
-            raise FileNotFoundError(f"Нет YAML-файлов в {_LAW_BASE_DIR}")
+            raise RuntimeError(f"Нет YAML-файлов в {_LAW_BASE_DIR}")
 
         violations: list[dict] = []
 
@@ -233,3 +257,10 @@ class DetectorEngine:
                 logger.exception("Детектор %s упал, продолжаем", vid)
 
         return results
+"""
+EOF
+echo "engine.py written"
+Output
+
+engine.py written
+"""
