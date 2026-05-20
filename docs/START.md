@@ -14,7 +14,6 @@
 1. `docs/decisions.md` — все принятые решения: продукт, стек, архитектура, Law Base, правила работы
 2. `docs/roadmap.md` — дорожная карта, текущий этап, статус задач
 3. `docs/architecture.md` — модули, потоки данных, реестр методов детекторов
-4. `docs/todo.md` — если существует, открытые вопросы и отложенные задачи
 
 После прочтения:
 - Сообщи какой этап сейчас активен
@@ -47,21 +46,29 @@ https://github.com/kil4leo-design/152fz-audit
 
 ## Текущий статус (обновлять после каждой сессии)
 
-**Дата последнего обновления:** 2026-05-17
+**Дата последнего обновления:** 2026-05-20
 
 **Завершены:**
 - Этап 0 — Инфраструктура (репозиторий, CI, ветки, шаблоны)
-- Law Base MVP — A.yaml, B.yaml, C.yaml, sources.yaml верифицированы, прошли два внешних аудита (Kimi, DeepSeek), исправлены
-- Law Monitor — архитектура зафиксирована в decisions.md (publication.pravo.gov.ru API + RSS)
-- architecture.md — полная архитектура: PlaywrightWrapper, network_log, DetectorEngine, disclaimer, валидация YAML
+- Law Base MVP — A.yaml, B.yaml, C.yaml, sources.yaml верифицированы
+- Law Monitor — архитектура зафиксирована в decisions.md
+- architecture.md — полная архитектура системы
+- `scanner/detectors/base.py` — абстрактный BaseDetector
+- `scanner/engine.py` — DetectorEngine: Pydantic-валидация YAML, фабричный паттерн, run_all()
+- `scanner/__init__.py`, `scanner/detectors/__init__.py` — Python-пакеты (fix ImportError)
+- `requirements.txt` — pydantic>=2.0 зафиксирован явно
+- CHANGELOG.md — заполнен
+- decisions.md — добавлены TODO: pd_fields дублирование, test.yml || true
 
 **В работе:**
 - Этап 1 — Detector Engine
-- Следующий шаг: реализовать scanner/detectors/base.py, фабричный паттерн в engine.py, первый детектор A1
+- Следующий шаг: первый детектор A1 → `scanner/detectors/html_link_search.py` + тесты
 
 **Открытые вопросы:**
 - D1 (HTTPS) — в TODO, требует подтверждения правоприменительной практики
 - E1 (уведомление РКН) — в TODO, требует решения технической проблемы доступа к реестру
-- 149-ФЗ — в TODO, проверить на применимость к детекторам после MVP
-- Law Monitor: diff редакций — в TODO, нужно для версионирования исторических отчётов
-- Law Monitor: graph/ontology — в TODO, рассмотреть при расширении за пределы MVP
+- 149-ФЗ — в TODO, проверить на применимость после MVP
+- Law Monitor: diff редакций — в TODO
+- Law Monitor: graph/ontology — в TODO
+- pd_fields дублирование B1/B2/B3 — в TODO, долгосрочно вынести в shared_params.yaml
+- test.yml: убрать || true после написания первых тестов
