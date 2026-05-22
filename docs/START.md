@@ -43,10 +43,10 @@ https://github.com/kil4leo-design/152fz-audit
 
 ## Текущий статус
 
-**Дата обновления:** 2026-05-22 (сессия 7)
+**Дата обновления:** 2026-05-22 (сессия 8)
 
-**Завершены:** Этап 0, Этап 1. Law Base MVP (A/B/C.yaml), BaseDetector, DetectorEngine, детекторы A1+B1+B2+B3+C1, PlaywrightWrapper, Scanner (оркестратор), тесты 19/19.
+**Завершены:** Этап 0, Этап 1, большая часть Этапа 2. Law Base MVP (A/B/C.yaml), BaseDetector, DetectorEngine, детекторы A1+B1+B2+B3+C1, PlaywrightWrapper, Scanner, ReportEngine (JSON), FastAPI (POST /scan + GET /health + CORS), тесты 19/19.
 
-**В работе:** Этап 2 — Report Engine + FastAPI + UI.
-**Следующий шаг:** `report/engine.py` — формирование отчёта (JSON + HTML) из списка нарушений.
-Затем: `api/main.py` (FastAPI, POST /scan), минимальный UI.
+**В работе:** Этап 2 — остаток.
+**Следующий шаг:** минимальный UI — React: поле URL + кнопка + отображение отчёта.
+API уже работает: `uvicorn api.main:app --reload` → POST /scan → JSON-отчёт.

@@ -14,6 +14,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import AnyHttpUrl, BaseModel
 
 from report.engine import build as build_report
@@ -34,6 +35,15 @@ app = FastAPI(
     description="Проверка сайтов на соответствие 152-ФЗ (персональные данные, РФ)",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+# CORS: разрешить запросы с любого origin для MVP.
+# В production сужать до домена UI.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
 )
 
 

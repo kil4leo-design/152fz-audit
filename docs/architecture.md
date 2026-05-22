@@ -228,6 +228,27 @@ HEADERS = {
 
 ---
 
+## Формат ответа POST /scan (report/engine.py)
+
+```json
+{
+  "url": "https://example.com",
+  "scanned_at": "2026-05-22T10:00:00+00:00",
+  "summary": {
+    "status": "violations_found",
+    "violations_count": 2,
+    "recommendations_count": 1
+  },
+  "violations": [...],
+  "recommendations": [...],
+  "disclaimer": "ВАЖНО: ..."
+}
+```
+
+`status`: `"compliant"` | `"recommendations_only"` | `"violations_found"`
+
+---
+
 ## Обязательный disclaimer в отчёте
 
 Каждый отчёт должен содержать:
