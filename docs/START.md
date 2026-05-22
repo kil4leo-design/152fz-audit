@@ -17,7 +17,7 @@
 2. docs/roadmap.md
 3. docs/architecture.md
 ```
-Без них — фантазия. Фантазия = ошибка. Жди файлы, читай, подтверждай понимание.
+Без них — фантазия. Фантазия = ошибка. открой директорию docs, читай файлы, подтверждай понимание если понял, иначе переспроси.
 Не начинай работу до подтверждения пользователя.
 
 ---
@@ -41,54 +41,11 @@ https://github.com/kil4leo-design/152fz-audit
 
 ---
 
-## Технический стейт — что уже сделано и заморожено
-
-### scanner/detectors/base.py
-- `BeautifulSoup` только под `TYPE_CHECKING` — не runtime-импорт
-- `_build_result()`: обязательные поля (`id`, `version`, `name`, `severity`, `legal_ref`, `fine`, `fix`) — прямой доступ `cfg["x"]`; поле с дефолтом (`is_recommendation`) — через `cfg.get()`
-- Нет `logger` — убран как мёртвый код
-
-### scanner/engine.py
-- `_Fix(BaseModel)`: `summary: str`, `steps: list[str]` — оба обязательны, дефолтов нет
-- `_ViolationConfig.fix: _Fix` — без дефолта
-- Только `RuntimeError` — `FileNotFoundError` убран как семантически неверный
-- `DETECTOR_REGISTRY` пуст — все детекторы закомментированы
-- Активация детектора = два шага одновременно: раскомментировать import + строку в реестре
-
-**Эти решения приняты и зафиксированы. Не предлагай альтернативы без явного запроса.**
-
----
-
-## Ловушки — уже были ошибки
-
-- `logger` добавлен но не используется → мёртвый код. Проверяй что каждый импорт используется.
-- `from bs4 import BeautifulSoup` на верхнем уровне → нарушает `TYPE_CHECKING`. Проверяй в каждом новом файле.
-- Смешанный доступ в `_build_result` → два раунда правок. Правило: обязательное = прямой доступ, дефолт = `.get()`.
-- `FileNotFoundError` при пустой директории → семантически неверно. Всегда `RuntimeError`.
-- Комментарий с описанием поведения кода → перепутал случаи. Верифицируй логику явно перед написанием.
-- `grep` с скобками в паттерне → ложные негативы. Используй `grep -F` для фиксированных строк.
-
----
-
 ## Текущий статус
 
-**Дата обновления:** 2026-05-22
+**Дата обновления:** 2026-05-22 (сессия 2)
 
-**Завершены:**
-- Этап 0 — Инфраструктура (репозиторий, CI, ветки, шаблоны)
-- Law Base MVP — A.yaml, B.yaml, C.yaml, sources.yaml верифицированы
-- `scanner/__init__.py`, `scanner/detectors/__init__.py`
-- `scanner/detectors/base.py` — BaseDetector (прошёл аудит)
-- `scanner/engine.py` — DetectorEngine (прошёл аудит)
-- `requirements.txt` — pydantic>=2.0 зафиксирован
+**Завершены:** Этап 0, Law Base MVP (A/B/C.yaml), BaseDetector, DetectorEngine, A1 детектор + тесты (2/2).
 
-**В работе:**
-- Этап 1 — Detector Engine
-- **Следующий шаг:** детектор A1 → `scanner/detectors/html_link_search.py` + два теста
-
-**Открытые вопросы (TODO):**
-- D1 (HTTPS), E1 (РКН), 149-ФЗ — после MVP
-- Law Monitor: diff редакций, graph/ontology — после MVP
-- pd_fields дублирование B1/B2/B3 — долгосрочно shared_params.yaml
-- test.yml: убрать `|| true` после первых тестов
-- B1/B2 зависимость в run_all — при написании B-детекторов
+**В работе:** Этап 1 — Detector Engine.
+**Следующий шаг:** детектор B1 → `scanner/detectors/html_checkbox_prechecked.py` + два теста.
