@@ -70,7 +70,7 @@ Dispatch по полю `detector.method` из YAML, не по `id`. Реестр
 | `html_form_no_consent` | `HtmlFormNoConsentDetector` | `scanner/detectors/html_form_no_consent.py` |
 | `html_form_no_policy_link` | `HtmlFormNoPolicyLinkDetector` | `scanner/detectors/html_form_no_policy_link.py` |
 | `html_cookie_banner_missing` | `HtmlCookieBannerMissingDetector` | `scanner/detectors/html_cookie_banner_missing.py` |
-| `html_foreign_analytics` | `HtmlForeignAnalyticsDetector` | `scanner/detectors/html_foreign_analytics.py` |
+| `html_foreign_analytics` | `HtmlForeignAnalyticsDetector` | не реализован — C2 отключён (`enabled: false`) |
 
 **Playwright — единственный режим работы.**
 PlaywrightWrapper ВСЕГДА:
