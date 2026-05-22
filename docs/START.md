@@ -43,9 +43,9 @@ https://github.com/kil4leo-design/152fz-audit
 
 ## Текущий статус
 
-**Дата обновления:** 2026-05-22 (сессия 5)
+**Дата обновления:** 2026-05-22 (сессия 6)
 
-**Завершены:** Этап 0, Law Base MVP (A/B/C.yaml), BaseDetector, DetectorEngine, детекторы A1 + B1 + B2 + B3 + C1, тесты 12/12. Аудиты: исправлены B2 severity mutation, морфология YAML, покрытие alternative_consent, evidence["found"] удалён, C2 отключён (false positive риск).
+**Завершены:** Этап 0, Law Base MVP (A/B/C.yaml), BaseDetector, DetectorEngine, детекторы A1 + B1 + B2 + B3 + C1, тесты 18/18. Аудиты: исправлены B2 severity mutation, морфология YAML, покрытие alternative_consent, evidence["found"] удалён, C2 отключён (false positive риск), C1 domain substring match, B1/B2/B3 pd_fields word-boundary.
 
 **В работе:** Этап 1 — Detector Engine.
 **Следующий шаг:** `scanner/playwright_wrapper.py` — единственный оставшийся блокер Этапа 1.

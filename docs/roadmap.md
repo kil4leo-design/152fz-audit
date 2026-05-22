@@ -73,8 +73,9 @@
 Рабочий продукт который можно показать реальному пользователю.
 
 ### Задачи — Scanner
-- [ ] Реализовать `scanner/engine.py` — прогон всех детекторов по URL
-- [ ] Обработка ошибок на уровне каждого детектора (один упал — остальные продолжают)
+- [x] `scanner/engine.py` — DetectorEngine реализован в Этапе 1
+- [x] Обработка ошибок на уровне детектора — реализована в `DetectorEngine.run_all()`
+- [ ] `scanner/scanner.py` — оркестрация: PlaywrightWrapper → BeautifulSoup → DetectorEngine (нужен после `playwright_wrapper.py`)
 - [ ] Поддержка одиночного URL и списка URL
 
 ### Задачи — Report Engine
