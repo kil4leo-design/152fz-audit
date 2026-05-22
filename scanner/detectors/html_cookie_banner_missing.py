@@ -77,7 +77,7 @@ def _match_network_domains(
     hits = []
     for entry in network_log:
         domain = entry.get("domain", "")
-        if any(d in domain for d in intercept_domains):
+        if any(domain == d or domain.endswith("." + d) for d in intercept_domains):
             url = entry.get("url", "")
             if url:
                 hits.append(url)

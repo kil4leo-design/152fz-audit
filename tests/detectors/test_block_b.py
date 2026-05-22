@@ -111,3 +111,42 @@ def test_b3_compliant_has_policy_link():
     result = HtmlFormNoPolicyLinkDetector(_load_b3_config()).detect(_soup(html), [])
 
     assert result == []
+
+
+# ── Регрессионные тесты Bug 2 — pd_fields word-boundary ──────────────────────
+
+def test_b2_no_false_positive_filename_field():
+    """Форма с name='filename'/'username' не должна триггерить B2 — 'name' не подстрока."""
+    html = """
+    <form>
+      <input type="text" name="filename" placeholder="Путь к файлу">
+      <input type="text" name="username" placeholder="Логин">
+      <input type="submit" value="Загрузить">
+    </form>
+    """
+    result = HtmlFormNoConsentDetector(_load_b2_config()).detect(_soup(html), [])
+    assert result == [], f"Ложное срабатывание B2 на форму без ПДн: {result}"
+
+
+def test_b2_true_positive_name_field():
+    """Форма с name='name' (точное совпадение) — должна триггерить B2."""
+    html = """
+    <form>
+      <input type="text" name="name" placeholder="Ваше имя">
+      <input type="submit" value="Отправить">
+    </form>
+    """
+    result = HtmlFormNoConsentDetector(_load_b2_config()).detect(_soup(html), [])
+    assert len(result) == 1 and result[0]["id"] == "B2"
+
+
+def test_b2_true_positive_first_name_field():
+    """Форма с name='first_name' (компонент через _) — должна триггерить B2."""
+    html = """
+    <form>
+      <input type="text" name="first_name" placeholder="Имя">
+      <input type="submit" value="Отправить">
+    </form>
+    """
+    result = HtmlFormNoConsentDetector(_load_b2_config()).detect(_soup(html), [])
+    assert len(result) == 1 and result[0]["id"] == "B2"

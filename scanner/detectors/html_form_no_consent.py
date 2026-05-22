@@ -6,6 +6,7 @@ scanner/detectors/html_form_no_consent.py — Детектор B2.
 """
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 from scanner.detectors.base import BaseDetector
@@ -81,8 +82,11 @@ def _form_has_pd_fields(
             return True
         name = (inp.get("name") or "").lower()
         placeholder = (inp.get("placeholder") or "").lower()
-        if any(f in name or f in placeholder for f in pd_fields):
-            return True
+        for f in pd_fields:
+            if re.search(r'(?:^|[_\-])' + re.escape(f) + r'(?:[_\-]|$)', name):
+                return True
+            if f in placeholder:
+                return True
     return False
 
 

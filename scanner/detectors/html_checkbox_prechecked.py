@@ -6,6 +6,7 @@ scanner/detectors/html_checkbox_prechecked.py — Детектор B1.
 """
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 from scanner.detectors.base import BaseDetector
@@ -62,8 +63,14 @@ def _form_has_pd_fields(
             return True
         name = (inp.get("name") or "").lower()
         placeholder = (inp.get("placeholder") or "").lower()
-        if any(f in name or f in placeholder for f in pd_fields):
-            return True
+        for f in pd_fields:
+            # name= атрибут: word-component match — "name" совпадает с "name", "first_name",
+            # но не с "filename" или "username" (нет разделителя _ или -)
+            if re.search(r'(?:^|[_\-])' + re.escape(f) + r'(?:[_\-]|$)', name):
+                return True
+            # placeholder= — человекочитаемый текст, substring достаточно
+            if f in placeholder:
+                return True
     return False
 
 
