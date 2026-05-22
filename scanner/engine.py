@@ -27,6 +27,12 @@ import yaml
 from pydantic import BaseModel, ValidationError
 
 from scanner.detectors.base import BaseDetector
+from scanner.detectors.html_link_search import HtmlLinkSearchDetector
+from scanner.detectors.html_checkbox_prechecked import HtmlCheckboxPrecheckedDetector
+from scanner.detectors.html_form_no_consent import HtmlFormNoConsentDetector
+from scanner.detectors.html_form_no_policy_link import HtmlFormNoPolicyLinkDetector
+from scanner.detectors.html_cookie_banner_missing import HtmlCookieBannerMissingDetector
+# from scanner.detectors.html_foreign_analytics import HtmlForeignAnalyticsDetector
 
 # BeautifulSoup используется только в аннотациях — не нужен в runtime.
 # from __future__ import annotations превращает аннотации в строки.
@@ -94,18 +100,11 @@ class _ViolationConfig(BaseModel):
 # Реестр методов зафиксирован в architecture.md → таблица "Реестр методов".
 #
 # АКТИВАЦИЯ НОВОГО ДЕТЕКТОРА — два шага обязательно вместе:
-#   1. Раскомментировать import ниже
-#   2. Раскомментировать строку в DETECTOR_REGISTRY
+#   1. Добавить import в начало файла (блок detector-imports выше)
+#   2. Добавить строку в DETECTOR_REGISTRY ниже
 # Если сделать только один шаг:
 #   - реестр без импорта  → NameError при старте (имя класса не определено)
 #   - импорт без реестра  → нет ошибки, но детектор молча не запускается
-
-from scanner.detectors.html_link_search import HtmlLinkSearchDetector
-from scanner.detectors.html_checkbox_prechecked import HtmlCheckboxPrecheckedDetector
-from scanner.detectors.html_form_no_consent import HtmlFormNoConsentDetector
-from scanner.detectors.html_form_no_policy_link import HtmlFormNoPolicyLinkDetector
-from scanner.detectors.html_cookie_banner_missing import HtmlCookieBannerMissingDetector
-# from scanner.detectors.html_foreign_analytics import HtmlForeignAnalyticsDetector
 
 DETECTOR_REGISTRY: dict[str, type[BaseDetector]] = {
     "html_link_search":           HtmlLinkSearchDetector,
