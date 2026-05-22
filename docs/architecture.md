@@ -171,8 +171,8 @@ HEADERS = {
 4.  Scanner → robots.txt check (если запрещён → вернуть ошибку)
 5.  Scanner → PlaywrightWrapper.scan(url) → (html, network_log)
 6.  Scanner → BeautifulSoup(html) → soup
-7.  Scanner → DetectorEngine.run_all(soup, network_log, config)
-8.  DetectorEngine читает law_base/blocks/*.yaml
+7.  Scanner → DetectorEngine.run_all(soup, network_log)
+8.  DetectorEngine читает law_base/blocks/*.yaml (загружены при инициализации)
 9.  DetectorEngine → для каждого enabled детектора:
     a. detector.detect(soup, network_log) → результат
     b. Если детектор упал → логируем, продолжаем следующий

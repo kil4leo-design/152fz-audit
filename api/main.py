@@ -1,0 +1,67 @@
+"""
+api/main.py — FastAPI приложение.
+
+Эндпоинты:
+    POST /scan   — сканировать URL, вернуть отчёт JSON
+    GET  /health — статус сервиса
+
+Scanner запускается один раз через FastAPI lifespan:
+браузер живёт всё время работы сервиса, не создаётся на каждый запрос.
+"""
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import AnyHttpUrl, BaseModel
+
+from report.engine import build as build_report
+from scanner.scanner import RobotsDisallowedError, Scanner
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with Scanner() as scanner:
+        app.state.scanner = scanner
+        yield
+
+
+app = FastAPI(
+    title="152-ФЗ Audit API",
+    description="Проверка сайтов на соответствие 152-ФЗ (персональные данные, РФ)",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+
+class ScanRequest(BaseModel):
+    url: AnyHttpUrl
+
+
+@app.post("/scan")
+async def scan(body: ScanRequest, req: Request) -> dict:
+    """
+    Сканировать URL и вернуть отчёт о нарушениях 152-ФЗ.
+
+    - **403** — robots.txt запрещает сканирование
+    - **422** — невалидный URL
+    - **500** — ошибка загрузки страницы (сеть, таймаут и т.д.)
+    """
+    url = str(body.url)
+    try:
+        violations = await req.app.state.scanner.scan(url)
+    except RobotsDisallowedError:
+        raise HTTPException(status_code=403, detail="robots.txt запрещает сканирование этого URL")
+    except Exception as exc:
+        logger.exception("Ошибка сканирования %s", url)
+        raise HTTPException(status_code=500, detail=str(exc))
+    return build_report(violations, url)
+
+
+@app.get("/health")
+async def health() -> dict:
+    """Статус сервиса."""
+    return {"status": "ok"}

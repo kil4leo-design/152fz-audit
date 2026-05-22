@@ -17,6 +17,7 @@ scanner/scanner.py — Оркестратор сканирования.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from bs4 import BeautifulSoup
@@ -57,4 +58,5 @@ class Scanner:
         """
         html, network_log = await self._pw.scan(url)
         soup = BeautifulSoup(html, "html.parser")
-        return self._engine.run_all(soup, network_log)
+        # run_all синхронный; A1 делает HTTP-запросы внутри — запускаем в thread
+        return await asyncio.to_thread(self._engine.run_all, soup, network_log)
