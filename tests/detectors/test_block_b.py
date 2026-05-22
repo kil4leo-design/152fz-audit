@@ -80,6 +80,7 @@ def test_b2_alternative_consent_is_recommendation():
     assert len(result) == 1
     assert result[0]["id"] == "B2"
     assert result[0]["is_recommendation"] is True
+    assert result[0]["evidence"]["form_index"] == 0
     assert result[0]["evidence"]["alternative_consent_text"] is not None
 
 
