@@ -50,14 +50,15 @@ class HtmlFormNoConsentDetector(BaseDetector):
                 alt = _find_alternative_consent(form, alt_keywords)
 
             if alt is not None:
-                # Альтернативное согласие — severity из конфига (warning)
+                # Альтернативное согласие юридически спорно →
+                # фиксируем как рекомендацию, не как нарушение
                 result = self._build_result({
                     "form_index": form_index,
                     "found": False,
                     "detail": "Чекбокс согласия отсутствует; найдено альтернативное согласие в тексте кнопки",
                     "alternative_consent_text": alt,
                 })
-                result["severity"] = alt_consent_cfg.get("severity_if_found", "warning")
+                result["is_recommendation"] = True
                 violations.append(result)
             else:
                 violations.append(self._build_result({
