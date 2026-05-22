@@ -102,7 +102,7 @@ class _ViolationConfig(BaseModel):
 
 from scanner.detectors.html_link_search import HtmlLinkSearchDetector
 from scanner.detectors.html_checkbox_prechecked import HtmlCheckboxPrecheckedDetector
-# from scanner.detectors.html_form_no_consent import HtmlFormNoConsentDetector
+from scanner.detectors.html_form_no_consent import HtmlFormNoConsentDetector
 # from scanner.detectors.html_form_no_policy_link import HtmlFormNoPolicyLinkDetector
 # from scanner.detectors.html_cookie_banner_missing import HtmlCookieBannerMissingDetector
 # from scanner.detectors.html_foreign_analytics import HtmlForeignAnalyticsDetector
@@ -110,7 +110,7 @@ from scanner.detectors.html_checkbox_prechecked import HtmlCheckboxPrecheckedDet
 DETECTOR_REGISTRY: dict[str, type[BaseDetector]] = {
     "html_link_search":           HtmlLinkSearchDetector,
     "html_checkbox_prechecked":   HtmlCheckboxPrecheckedDetector,
-    # "html_form_no_consent":       HtmlFormNoConsentDetector,
+    "html_form_no_consent":       HtmlFormNoConsentDetector,
     # "html_form_no_policy_link":   HtmlFormNoPolicyLinkDetector,
     # "html_cookie_banner_missing": HtmlCookieBannerMissingDetector,
     # "html_foreign_analytics":     HtmlForeignAnalyticsDetector,
