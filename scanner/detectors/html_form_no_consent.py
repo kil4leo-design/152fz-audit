@@ -110,7 +110,11 @@ def _find_alternative_consent(form: Tag, alt_keywords: list[str]) -> str | None:
     ключевое слово типа «нажимая», «соглашаетесь» и т.д.
     Проверяет: текст кнопки, соседний <p>/<div>/<span>, родительский контейнер.
     """
-    for submit in form.find_all(["input", "button"], type="submit"):
+    for submit in form.find_all(["input", "button"]):
+        # <button> без type= по HTML-спеку является submit по умолчанию
+        submit_type = (submit.get("type") or ("submit" if submit.name == "button" else "text")).lower()
+        if submit_type != "submit":
+            continue
         # Текст самой кнопки
         btn_text = (submit.get("value") or submit.get_text(strip=True) or "").lower()
         if any(kw in btn_text for kw in alt_keywords):

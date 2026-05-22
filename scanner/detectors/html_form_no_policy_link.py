@@ -94,7 +94,11 @@ def _find_policy_link(
 
     # Уровень 3: текст кнопки submit
     if check_submit_text:
-        for submit in form.find_all(["input", "button"], type="submit"):
+        for submit in form.find_all(["input", "button"]):
+            # <button> без type= по HTML-спеку является submit по умолчанию
+            submit_type = (submit.get("type") or ("submit" if submit.name == "button" else "text")).lower()
+            if submit_type != "submit":
+                continue
             btn_text = (
                 submit.get("value") or submit.get_text(separator=" ", strip=True) or ""
             ).lower()

@@ -1,7 +1,5 @@
 """
 tests/detectors/test_block_b.py — Тесты детекторов B1, B2, B3.
-
-Два теста на каждый детектор: нарушение + соответствие.
 """
 from pathlib import Path
 
@@ -129,10 +127,11 @@ def test_b2_no_false_positive_filename_field():
 
 
 def test_b2_true_positive_name_field():
-    """Форма с name='name' (точное совпадение) — должна триггерить B2."""
+    """Форма с name='name' (точное совпадение) — должна триггерить B2.
+    Placeholder нейтральный — тест изолирует name= атрибут, не placeholder."""
     html = """
     <form>
-      <input type="text" name="name" placeholder="Ваше имя">
+      <input type="text" name="name" placeholder="Введите данные">
       <input type="submit" value="Отправить">
     </form>
     """
@@ -141,12 +140,27 @@ def test_b2_true_positive_name_field():
 
 
 def test_b2_true_positive_first_name_field():
-    """Форма с name='first_name' (компонент через _) — должна триггерить B2."""
+    """Форма с name='first_name' (компонент через _) — должна триггерить B2.
+    Placeholder нейтральный — тест изолирует name= атрибут, не placeholder."""
     html = """
     <form>
-      <input type="text" name="first_name" placeholder="Имя">
+      <input type="text" name="first_name" placeholder="Введите данные">
       <input type="submit" value="Отправить">
     </form>
     """
     result = HtmlFormNoConsentDetector(_load_b2_config()).detect(_soup(html), [])
     assert len(result) == 1 and result[0]["id"] == "B2"
+
+
+def test_b2_implicit_submit_button_alternative_consent():
+    """<button> без type= — неявный submit по HTML-спеку — должен обнаруживаться."""
+    html = """
+    <form>
+      <input type="text" name="name" placeholder="Введите данные">
+      <button>Нажимая, вы соглашаетесь с условиями обработки данных</button>
+    </form>
+    """
+    result = HtmlFormNoConsentDetector(_load_b2_config()).detect(_soup(html), [])
+    assert len(result) == 1
+    assert result[0]["id"] == "B2"
+    assert result[0]["is_recommendation"] is True
