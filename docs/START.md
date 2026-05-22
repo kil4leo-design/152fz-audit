@@ -43,11 +43,10 @@ https://github.com/kil4leo-design/152fz-audit
 
 ## Текущий статус
 
-**Дата обновления:** 2026-05-22 (сессия 6)
+**Дата обновления:** 2026-05-22 (сессия 7)
 
-**Завершены:** Этап 0, Law Base MVP (A/B/C.yaml), BaseDetector, DetectorEngine, детекторы A1 + B1 + B2 + B3 + C1, тесты 19/19. Аудиты: исправлены B2 severity mutation, морфология YAML, покрытие alternative_consent, evidence["found"] удалён, C2 отключён (false positive риск), C1 domain substring match, B1/B2/B3 pd_fields word-boundary.
+**Завершены:** Этап 0, Этап 1. Law Base MVP (A/B/C.yaml), BaseDetector, DetectorEngine, детекторы A1+B1+B2+B3+C1, PlaywrightWrapper, Scanner (оркестратор), тесты 19/19.
 
-**В работе:** Этап 1 — Detector Engine.
-**Следующий шаг:** `scanner/playwright_wrapper.py` — единственный оставшийся блокер Этапа 1.
-PlaywrightWrapper: robots.txt check → network interception → page.goto(networkidle+2s) → (html, network_log).
-Архитектура зафиксирована в architecture.md → раздел "PlaywrightWrapper — обязательное поведение".
+**В работе:** Этап 2 — Report Engine + FastAPI + UI.
+**Следующий шаг:** `report/engine.py` — формирование отчёта (JSON + HTML) из списка нарушений.
+Затем: `api/main.py` (FastAPI, POST /scan), минимальный UI.

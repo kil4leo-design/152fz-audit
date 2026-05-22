@@ -27,7 +27,7 @@
 ---
 
 ## Этап 1 — Detector Engine + Law Base
-**Статус:** 🔄 В работе (последний блокер: `scanner/playwright_wrapper.py`)
+**Статус:** ✅ Завершён
 
 ### Цель
 Каждый детектор работает, протестирован, синхронизирован с базой критериев.
@@ -47,7 +47,7 @@
 ### Задачи — Detector Engine
 - [x] Реализовать `scanner/detectors/base.py` — базовый класс детектора
 - [x] Реализовать фабричный паттерн в `scanner/engine.py` (dispatch по method, не по id)
-- [ ] Реализовать `scanner/playwright_wrapper.py`
+- [x] Реализовать `scanner/playwright_wrapper.py`
 - [x] Реализовать детектор A1
 - [x] Реализовать детекторы B1, B2, B3
 - [x] Реализовать детектор C1 (C2 — отложен, enabled: false)
@@ -67,7 +67,7 @@
 ---
 
 ## Этап 2 — Scanner + Report Engine + минимальный UI
-**Статус:** 🔲 Не начат
+**Статус:** 🔄 В работе
 
 ### Цель
 Рабочий продукт который можно показать реальному пользователю.
@@ -75,7 +75,7 @@
 ### Задачи — Scanner
 - [x] `scanner/engine.py` — DetectorEngine реализован в Этапе 1
 - [x] Обработка ошибок на уровне детектора — реализована в `DetectorEngine.run_all()`
-- [ ] `scanner/scanner.py` — оркестрация: PlaywrightWrapper → BeautifulSoup → DetectorEngine (нужен после `playwright_wrapper.py`)
+- [x] `scanner/scanner.py` — оркестрация: PlaywrightWrapper → BeautifulSoup → DetectorEngine
 - [ ] Поддержка одиночного URL и списка URL
 
 ### Задачи — Report Engine
