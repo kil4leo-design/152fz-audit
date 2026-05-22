@@ -72,6 +72,17 @@ def test_b2_compliant_has_consent_checkbox():
     assert result == []
 
 
+def test_b2_alternative_consent_is_recommendation():
+    """Форма без чекбокса, но с согласием в тексте кнопки — рекомендация, не нарушение."""
+    html = (FIXTURES / "b2_alternative_consent.html").read_text(encoding="utf-8")
+    result = HtmlFormNoConsentDetector(_load_b2_config()).detect(_soup(html), [])
+
+    assert len(result) == 1
+    assert result[0]["id"] == "B2"
+    assert result[0]["is_recommendation"] is True
+    assert result[0]["evidence"]["alternative_consent_text"] is not None
+
+
 # ── B3 ────────────────────────────────────────────────────────────────────────
 
 def _load_b3_config() -> dict:
