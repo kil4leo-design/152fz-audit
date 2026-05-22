@@ -104,7 +104,7 @@ from scanner.detectors.html_link_search import HtmlLinkSearchDetector
 from scanner.detectors.html_checkbox_prechecked import HtmlCheckboxPrecheckedDetector
 from scanner.detectors.html_form_no_consent import HtmlFormNoConsentDetector
 from scanner.detectors.html_form_no_policy_link import HtmlFormNoPolicyLinkDetector
-# from scanner.detectors.html_cookie_banner_missing import HtmlCookieBannerMissingDetector
+from scanner.detectors.html_cookie_banner_missing import HtmlCookieBannerMissingDetector
 # from scanner.detectors.html_foreign_analytics import HtmlForeignAnalyticsDetector
 
 DETECTOR_REGISTRY: dict[str, type[BaseDetector]] = {
@@ -112,7 +112,7 @@ DETECTOR_REGISTRY: dict[str, type[BaseDetector]] = {
     "html_checkbox_prechecked":   HtmlCheckboxPrecheckedDetector,
     "html_form_no_consent":       HtmlFormNoConsentDetector,
     "html_form_no_policy_link":   HtmlFormNoPolicyLinkDetector,
-    # "html_cookie_banner_missing": HtmlCookieBannerMissingDetector,
+    "html_cookie_banner_missing": HtmlCookieBannerMissingDetector,
     # "html_foreign_analytics":     HtmlForeignAnalyticsDetector,
 }
 
