@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 
 from scanner.detectors.html_checkbox_prechecked import HtmlCheckboxPrecheckedDetector
 from scanner.detectors.html_form_no_consent import HtmlFormNoConsentDetector
+from scanner.detectors.html_form_no_policy_link import HtmlFormNoPolicyLinkDetector
 
 FIXTURES = Path(__file__).parent / "fixtures"
 LAW_BASE = Path(__file__).parent.parent.parent / "law_base" / "blocks"
@@ -67,5 +68,32 @@ def test_b2_compliant_has_consent_checkbox():
     """Форма с ПДн и чекбоксом согласия — нарушений нет."""
     html = (FIXTURES / "b2_compliant.html").read_text(encoding="utf-8")
     result = HtmlFormNoConsentDetector(_load_b2_config()).detect(_soup(html), [])
+
+    assert result == []
+
+
+# ── B3 ────────────────────────────────────────────────────────────────────────
+
+def _load_b3_config() -> dict:
+    with (LAW_BASE / "B.yaml").open(encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    return data["violations"][2]
+
+
+def test_b3_violation_no_policy_link():
+    """Форма с чекбоксом согласия, но без ссылки на политику — нарушение B3."""
+    html = (FIXTURES / "b3_violation.html").read_text(encoding="utf-8")
+    result = HtmlFormNoPolicyLinkDetector(_load_b3_config()).detect(_soup(html), [])
+
+    assert len(result) == 1
+    assert result[0]["id"] == "B3"
+    assert result[0]["evidence"]["form_index"] == 0
+    assert result[0]["evidence"]["found"] is False
+
+
+def test_b3_compliant_has_policy_link():
+    """Форма со ссылкой на политику внутри — нарушений нет."""
+    html = (FIXTURES / "b3_compliant.html").read_text(encoding="utf-8")
+    result = HtmlFormNoPolicyLinkDetector(_load_b3_config()).detect(_soup(html), [])
 
     assert result == []
