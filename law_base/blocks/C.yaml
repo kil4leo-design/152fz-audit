@@ -102,7 +102,6 @@ violations:
         # Network analysis (обязателен для достоверного результата)
         # Проверяет фактическую загрузку аналитических запросов ДО согласия
         network_analysis:
-          enabled: true
           # Домены аналитики для перехвата сетевых запросов
           intercept_domains:
             - "google-analytics.com"
@@ -115,34 +114,6 @@ violations:
             - "mixpanel.com"
             - "amplitude.com"
             - "cloudflareinsights.com"
-          # Если аналитика загружается до взаимодействия с баннером — нарушение
-          check_analytics_before_consent: true
-        # Функциональность баннера (через Playwright DOM)
-        # Баннер должен содержать минимум 2 из 3 групп кнопок
-        # Каждая группа — список синонимов для одного типа действия
-        verify_functional:
-          min_buttons_required: 2
-          button_groups:
-            accept:
-              - "принять"
-              - "accept"
-              - "agree"
-              - "ok"
-              - "хорошо"
-            reject:
-              - "отклонить"
-              - "reject"
-              - "decline"
-              - "refuse"
-              - "не согласен"
-              - "отказаться"
-            settings:
-              - "настройки"
-              - "settings"
-              - "configure"
-              - "manage"
-              - "выбрать"
-              - "подробнее" 
     fix:
       summary: "Установить cookie-баннер с запросом согласия при первом визите"
       steps:
