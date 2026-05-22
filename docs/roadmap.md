@@ -1,7 +1,7 @@
 # roadmap.md — Дорожная карта
 
 > Статус обновляется по мере выполнения этапов.
-> Последнее обновление: 2026-05-22 (сессия 6)
+> Последнее обновление: 2026-05-22 (сессия 8)
 
 ---
 
@@ -76,7 +76,8 @@
 - [x] `scanner/engine.py` — DetectorEngine реализован в Этапе 1
 - [x] Обработка ошибок на уровне детектора — реализована в `DetectorEngine.run_all()`
 - [x] `scanner/scanner.py` — оркестрация: PlaywrightWrapper → BeautifulSoup → DetectorEngine
-- [ ] Поддержка одиночного URL и списка URL
+- [x] `scanner/playwright_wrapper.py` — robots.txt, network interception, rate limiting
+- [ ] Поддержка списка URL (batch scan) — post-MVP
 
 ### Задачи — Report Engine
 - [x] Реализовать `report/engine.py` — формирование отчёта из результатов

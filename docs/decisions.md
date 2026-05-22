@@ -308,4 +308,38 @@ C2 (зарубежная аналитика → локализация) имее
 - Русские ключевые слова в именительном падеже не совпадают с другими падежами. Использовать стемы ("политик", "соглас", "конфиденциальност").
 - `evidence["found"]` с разной семантикой в разных детекторах → путаница в Report Engine. Решение: убрать поле entirely, использовать описательные поля.
 - Детектор с риском ложноположительного результата на крупный штраф → `enabled: false` по умолчанию, не код-заглушка.
+- Импорты детекторов после Pydantic-моделей в engine.py → ruff E402. Все imports — строго в начале файла.
+- `pytest-asyncio` в requirements.txt, но не установлен → `asyncio_mode` warning на каждый запуск тестов. Проверять установку всех зависимостей из requirements.txt.
+- `DetectorEngine.run_all()` синхронный; вызов из async-контекста блокирует event loop. Всегда оборачивать в `asyncio.to_thread()` при вызове из async-функции.
+
+---
+
+## Технические решения — сессии 7–8 (2026-05-22)
+
+### PlaywrightWrapper — async context manager, не функция
+PlaywrightWrapper управляет браузером. Браузер создаётся один раз при `__aenter__` и живёт до `__aexit__`. Создавать браузер на каждый запрос (`async with PlaywrightWrapper()` внутри scan()) → ~1-2 секунды накладных расходов на запрос.
+**Правило:** Scanner и PlaywrightWrapper — context manager'ы. Жизненный цикл браузера совпадает с жизненным циклом приложения (FastAPI lifespan).
+
+### Scanner как async context manager для FastAPI lifespan
+```python
+@asynccontextmanager
+async def lifespan(app):
+    async with Scanner() as scanner:
+        app.state.scanner = scanner
+        yield
+```
+DetectorEngine и браузер создаются один раз при старте. `app.state.scanner` доступен во всех хэндлерах.
+
+### asyncio.to_thread для run_all
+Детектор A1 делает синхронные HTTP-запросы (`httpx.Client`). `DetectorEngine.run_all()` синхронный. Вызов напрямую из `async def scan()` заблокирует event loop на каждый реальный скан.
+**Правило:** `await asyncio.to_thread(self._engine.run_all, soup, network_log)`.
+
+### robots.txt через asyncio.to_thread с таймаутом
+`RobotFileParser.read()` из stdlib — синхронный, может зависнуть. Оборачивается в `asyncio.wait_for(asyncio.to_thread(rp.read), timeout=5.0)`. Любая ошибка или таймаут → разрешить сканирование (стандартная практика).
+
+### CORS — allow_origins=["*"] для MVP
+Без CORS middleware браузерный React UI не может вызвать API. `allow_origins=["*"]` на MVP допустим. При деплое сужать до домена UI.
+
+### ReportEngine.build() — разделение violations/recommendations
+Поле `is_recommendation` (bool) — единственный разделитель. Нарушения и рекомендации разделяются в `build()`, не в детекторах. `status`: `"compliant"` | `"recommendations_only"` | `"violations_found"`.
 
