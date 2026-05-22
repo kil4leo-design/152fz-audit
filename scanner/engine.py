@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
 from pydantic import BaseModel, ValidationError
@@ -70,7 +70,7 @@ class _Fix(BaseModel):
 
 class _DetectorConfig(BaseModel):
     method: str
-    params: dict = {}
+    params: dict[str, Any] = {}
 
 
 class _ViolationConfig(BaseModel):
@@ -100,16 +100,16 @@ class _ViolationConfig(BaseModel):
 #   - реестр без импорта  → NameError при старте (имя класса не определено)
 #   - импорт без реестра  → нет ошибки, но детектор молча не запускается
 
-# from scanner.detectors.html_link_search import HtmlLinkSearchDetector
-# from scanner.detectors.html_checkbox_prechecked import HtmlCheckboxPrecheckedDetector
+from scanner.detectors.html_link_search import HtmlLinkSearchDetector
+from scanner.detectors.html_checkbox_prechecked import HtmlCheckboxPrecheckedDetector
 # from scanner.detectors.html_form_no_consent import HtmlFormNoConsentDetector
 # from scanner.detectors.html_form_no_policy_link import HtmlFormNoPolicyLinkDetector
 # from scanner.detectors.html_cookie_banner_missing import HtmlCookieBannerMissingDetector
 # from scanner.detectors.html_foreign_analytics import HtmlForeignAnalyticsDetector
 
 DETECTOR_REGISTRY: dict[str, type[BaseDetector]] = {
-    # "html_link_search":           HtmlLinkSearchDetector,
-    # "html_checkbox_prechecked":   HtmlCheckboxPrecheckedDetector,
+    "html_link_search":           HtmlLinkSearchDetector,
+    "html_checkbox_prechecked":   HtmlCheckboxPrecheckedDetector,
     # "html_form_no_consent":       HtmlFormNoConsentDetector,
     # "html_form_no_policy_link":   HtmlFormNoPolicyLinkDetector,
     # "html_cookie_banner_missing": HtmlCookieBannerMissingDetector,
@@ -126,7 +126,7 @@ class DetectorEngine:
     """
 
     def __init__(self) -> None:
-        # Список «сырых» словарей нарушений готовых к обработке:
+        # Список словарей нарушений (validated.model_dump()):
         # enabled=true И метод зарегистрирован в DETECTOR_REGISTRY
         self._violations: list[dict] = self._load_and_validate()
 
@@ -142,7 +142,7 @@ class DetectorEngine:
                           или нарушение не проходит Pydantic-валидацию
 
         Returns:
-            Список сырых словарей нарушений (enabled + метод в реестре).
+            Список словарей нарушений validated.model_dump() (enabled + метод в реестре).
         """
         yaml_files = sorted(_LAW_BASE_DIR.glob("*.yaml"))
         if not yaml_files:
@@ -152,7 +152,7 @@ class DetectorEngine:
 
         for path in yaml_files:
             raw_file = self._read_yaml(path)
-            for raw_violation in raw_file.get("violations", []):
+            for raw_violation in (raw_file.get("violations") or []):
                 # Валидация: обязательные поля, типы — fatal при ошибке
                 validated = self._validate_violation(raw_violation, path)
 
@@ -170,7 +170,7 @@ class DetectorEngine:
                     )
                     continue
 
-                violations.append(raw_violation)
+                violations.append(validated.model_dump())
 
         logger.info(
             "Law Base загружена: %d активных нарушений из %d файлов",
@@ -211,7 +211,7 @@ class DetectorEngine:
         Метод гарантированно присутствует в реестре —
         проверка выполнена при загрузке в _load_and_validate().
 
-        :param violation_config: сырой словарь нарушения из YAML
+        :param violation_config: словарь нарушения из validated.model_dump()
         :return: экземпляр конкретного детектора
         """
         method = violation_config["detector"]["method"]
@@ -227,10 +227,8 @@ class DetectorEngine:
         Один упавший детектор не останавливает остальные —
         исключение логируется, прогон продолжается.
 
-        TODO (Этап 1, блок B): реализовать передачу контекста форм
-        между детекторами B1/B2 (зависимость зафиксирована в architecture.md:
-        "B1 запускается только если форма с ПДн найдена",
-        "B1 и B2 взаимоисключающие для одной формы").
+        После прогона применяется _apply_b_mutex() — фильтр взаимоисключения
+        B1/B2 на уровне формы (зафиксировано в architecture.md).
 
         :param soup: BeautifulSoup-дерево HTML страницы
         :param network_log: список сетевых запросов от PlaywrightWrapper
@@ -248,4 +246,27 @@ class DetectorEngine:
             except Exception:
                 logger.exception("Детектор %s упал, продолжаем", vid)
 
-        return results
+        return self._apply_b_mutex(results)
+
+    @staticmethod
+    def _apply_b_mutex(results: list[dict]) -> list[dict]:
+        """
+        B2 (нет чекбокса) и B1 (предустановлен) взаимоисключающие для одной формы.
+        Если оба сработали на одном form_index — оставить B2, убрать B1.
+        Предусловие: B-детекторы включают form_index: int в evidence.
+        """
+        b2_forms: set[int] = {
+            r["evidence"]["form_index"]
+            for r in results
+            if r["id"] == "B2"
+            and isinstance(r.get("evidence", {}).get("form_index"), int)
+        }
+        if not b2_forms:
+            return results
+        return [
+            r for r in results
+            if not (
+                r["id"] == "B1"
+                and r.get("evidence", {}).get("form_index") in b2_forms
+            )
+        ]
