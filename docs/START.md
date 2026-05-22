@@ -43,9 +43,10 @@ https://github.com/kil4leo-design/152fz-audit
 
 ## Текущий статус
 
-**Дата обновления:** 2026-05-22 (сессия 2)
+**Дата обновления:** 2026-05-22 (сессия 3)
 
-**Завершены:** Этап 0, Law Base MVP (A/B/C.yaml), BaseDetector, DetectorEngine, A1 детектор + тесты (2/2).
+**Завершены:** Этап 0, Law Base MVP (A/B/C.yaml), BaseDetector, DetectorEngine, детекторы A1 + B1 + B2 + B3, тесты 9/9. Два аудита кода — исправлены B2 severity mutation, морфология YAML, покрытие alternative_consent.
 
 **В работе:** Этап 1 — Detector Engine.
-**Следующий шаг:** детектор B1 → `scanner/detectors/html_checkbox_prechecked.py` + два теста.
+**Следующий шаг:** детектор C1 → `scanner/detectors/html_cookie_banner_missing.py` + два теста.
+C1 отличается от A/B: детектирует не HTML-структуру, а network_log (запросы к доменам аналитики) + наличие/отсутствие cookie-баннера на странице.
