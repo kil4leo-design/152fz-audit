@@ -41,7 +41,6 @@ class HtmlFormNoPolicyLinkDetector(BaseDetector):
                 continue
             violations.append(self._build_result({
                 "form_index": form_index,
-                "found": False,
                 "detail": "Ссылка на политику обработки ПДн не найдена рядом с формой",
             }))
         return violations

@@ -215,10 +215,11 @@ HEADERS = {
             "steps": ["...", "..."]
         },
         "evidence": {
-            "found": False,
             "detail": "Ссылка с ключевыми словами не найдена в footer, header, nav, body",
             "checked_urls": [],       # для A1: какие URL проверены
-            "network_requests": []    # для C1/C2: какие запросы перехвачены
+            "network_requests": []    # для C1: какие запросы перехвачены
+            # для B1: "checkbox_text": str — текст найденного предустановленного чекбокса
+            # для B2: "alternative_consent_text": str | None — текст альтернативного согласия
             # для B1/B2/B3: обязательно "form_index": int  ← нужен для _apply_b_mutex()
         }
     }

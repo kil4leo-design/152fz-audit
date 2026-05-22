@@ -18,7 +18,7 @@ LAW_BASE = Path(__file__).parent.parent.parent / "law_base" / "blocks"
 def _load_a1_config() -> dict:
     with (LAW_BASE / "A.yaml").open(encoding="utf-8") as f:
         data = yaml.safe_load(f)
-    config = data["violations"][0]
+    config = next(v for v in data["violations"] if v["id"] == "A1")
     config["detector"]["params"]["verify_accessible"] = False
     return config
 
@@ -34,7 +34,7 @@ def test_a1_violation_no_link():
 
     assert len(result) == 1
     assert result[0]["id"] == "A1"
-    assert result[0]["evidence"]["found"] is False
+    assert result[0]["evidence"]["detail"] != ""
 
 
 def test_a1_compliant_with_link():

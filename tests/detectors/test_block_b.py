@@ -19,7 +19,7 @@ LAW_BASE = Path(__file__).parent.parent.parent / "law_base" / "blocks"
 def _load_b1_config() -> dict:
     with (LAW_BASE / "B.yaml").open(encoding="utf-8") as f:
         data = yaml.safe_load(f)
-    return data["violations"][0]
+    return next(v for v in data["violations"] if v["id"] == "B1")
 
 
 def _soup(html: str) -> BeautifulSoup:
@@ -34,7 +34,7 @@ def test_b1_violation_checkbox_prechecked():
     assert len(result) == 1
     assert result[0]["id"] == "B1"
     assert result[0]["evidence"]["form_index"] == 0
-    assert result[0]["evidence"]["found"] is True
+    assert result[0]["evidence"]["checkbox_text"] != ""
 
 
 def test_b1_compliant_checkbox_unchecked():
@@ -50,7 +50,7 @@ def test_b1_compliant_checkbox_unchecked():
 def _load_b2_config() -> dict:
     with (LAW_BASE / "B.yaml").open(encoding="utf-8") as f:
         data = yaml.safe_load(f)
-    return data["violations"][1]
+    return next(v for v in data["violations"] if v["id"] == "B2")
 
 
 def test_b2_violation_no_consent_checkbox():
@@ -60,8 +60,9 @@ def test_b2_violation_no_consent_checkbox():
 
     assert len(result) == 1
     assert result[0]["id"] == "B2"
+    assert result[0]["is_recommendation"] is False
     assert result[0]["evidence"]["form_index"] == 0
-    assert result[0]["evidence"]["found"] is False
+    assert result[0]["evidence"]["detail"] != ""
 
 
 def test_b2_compliant_has_consent_checkbox():
@@ -89,7 +90,7 @@ def test_b2_alternative_consent_is_recommendation():
 def _load_b3_config() -> dict:
     with (LAW_BASE / "B.yaml").open(encoding="utf-8") as f:
         data = yaml.safe_load(f)
-    return data["violations"][2]
+    return next(v for v in data["violations"] if v["id"] == "B3")
 
 
 def test_b3_violation_no_policy_link():
@@ -99,8 +100,9 @@ def test_b3_violation_no_policy_link():
 
     assert len(result) == 1
     assert result[0]["id"] == "B3"
+    assert result[0]["is_recommendation"] is False
     assert result[0]["evidence"]["form_index"] == 0
-    assert result[0]["evidence"]["found"] is False
+    assert result[0]["evidence"]["detail"] != ""
 
 
 def test_b3_compliant_has_policy_link():

@@ -43,7 +43,6 @@ class HtmlCheckboxPrecheckedDetector(BaseDetector):
             if checkbox_text is not None:
                 violations.append(self._build_result({
                     "form_index": form_index,
-                    "found": True,
                     "detail": "Чекбокс согласия на обработку ПДн предустановлен (checked)",
                     "checkbox_text": checkbox_text,
                 }))

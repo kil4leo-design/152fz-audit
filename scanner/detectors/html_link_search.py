@@ -69,7 +69,6 @@ class HtmlLinkSearchDetector(BaseDetector):
             return []
 
         return [self._build_result({
-            "found": False,
             "detail": "Ссылка на политику обработки ПДн не найдена на странице",
             "checked_urls": checked_urls,
         })]

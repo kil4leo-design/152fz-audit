@@ -59,8 +59,12 @@ class BaseDetector(ABC):
         С default в Pydantic (через .get()): is_recommendation.
 
         Формат evidence зависит от детектора:
-        - A1: {"found": bool, "detail": str, "checked_urls": list}
-        - C1/C2: {"found": bool, "detail": str, "network_requests": list}
+        - A1:   {"detail": str, "checked_urls": list}
+        - B1:   {"form_index": int, "detail": str, "checkbox_text": str}
+        - B2:   {"form_index": int, "detail": str} или
+                {"form_index": int, "detail": str, "alternative_consent_text": str}
+        - B3:   {"form_index": int, "detail": str}
+        - C1:   {"detail": str, "network_requests": list}
 
         :param evidence: доказательная база (что найдено / не найдено и где)
         :return: словарь нарушения в стандартном формате отчёта

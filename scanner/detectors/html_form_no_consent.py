@@ -25,7 +25,7 @@ class HtmlFormNoConsentDetector(BaseDetector):
        без exclude_keywords).
     4. Если чекбокс найден — нарушения нет.
     5. Если нет — проверить alternative_consent (текст у кнопки submit).
-       Альтернативное согласие юридически спорно → severity из YAML (warning).
+       Альтернативное согласие юридически спорно → is_recommendation=True.
     6. Нарушение → evidence с form_index (обязательно для _apply_b_mutex).
     """
 
@@ -54,7 +54,6 @@ class HtmlFormNoConsentDetector(BaseDetector):
                 # фиксируем как рекомендацию, не как нарушение
                 result = self._build_result({
                     "form_index": form_index,
-                    "found": False,
                     "detail": "Чекбокс согласия отсутствует; найдено альтернативное согласие в тексте кнопки",
                     "alternative_consent_text": alt,
                 })
@@ -63,7 +62,6 @@ class HtmlFormNoConsentDetector(BaseDetector):
             else:
                 violations.append(self._build_result({
                     "form_index": form_index,
-                    "found": False,
                     "detail": "Форма собирает персональные данные без чекбокса согласия",
                 }))
 

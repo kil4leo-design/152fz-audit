@@ -19,4 +19,4 @@ jobs:
       - name: Install Playwright browsers
         run: playwright install chromium
       - name: Run tests
-        run: pytest tests/ -v || true
+        run: pytest tests/ -v
