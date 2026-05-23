@@ -144,33 +144,41 @@ UI отображает информационный баннер: «robots.txt 
 Ответственность остаётся на пользователе (он авторизован проверять свой сайт).
 
 ```python
-async def scan(url: str) -> tuple[str, list[dict], bool]:
+async def scan(url: str) -> tuple[str, list[dict], bool, bool]:
     # 1. Проверить robots.txt — NOT raises, returns warning flag
     robots_warning = not (await _robots_allowed(url))
 
-    # 2. Настроить перехват сети
+    # 2. Настроить перехват сети + stealth fingerprint
     network_log = []
+    context = await browser.new_context(user_agent=_PAGE_UA)
+    await context.add_init_script(_STEALTH_SCRIPT)  # патч navigator.webdriver и др.
+    page = await context.new_page()
     page.on("request", lambda req: network_log.append({
-        "url": req.url,
-        "domain": extract_domain(req.url),
-        "timestamp": time.time()
+        "url": req.url, "domain": ..., "timestamp": time.time()
     }))
 
     # 3. Загрузить страницу (всегда, независимо от robots.txt)
-    await page.goto(url, wait_until="networkidle", timeout=30000)
+    response = await page.goto(url, wait_until="networkidle", timeout=30000)
     await page.wait_for_timeout(2000)  # динамический контент
 
-    # 4. Вернуть HTML + network_log + robots_warning
+    # 4. Определить waf_blocked (403/503 + WAF-сигнатура в HTML)
     html = await page.content()
-    return html, network_log, robots_warning
+    waf_blocked = _is_waf_blocked(response.status, html)
+
+    # 5. Вернуть HTML + network_log + robots_warning + waf_blocked
+    return html, network_log, robots_warning, waf_blocked
 ```
 
-**Обязательные заголовки:**
-```python
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; 152fz-audit/1.0; +https://github.com/kil4leo-design/152fz-audit)"
-}
-```
+**Два User-Agent:**
+- `_ROBOTS_UA` — честный bot UA для robots.txt (прозрачная идентификация)
+- `_PAGE_UA` — реальный Chrome 124 UA для загрузки страницы (WAF пропускает)
+
+**Stealth script** патчит: `navigator.webdriver`, `navigator.plugins`, `window.chrome`, `navigator.languages`.
+Запускается через `context.add_init_script()` до первого запроса.
+Chromium запускается с `--disable-blink-features=AutomationControlled`.
+
+**WAF detection (`_is_waf_blocked`):** status in (403, 503) AND html содержит одну из сигнатур:
+`ddos-guard`, `cloudflare`, `just a moment`, `checking your browser`, `access denied`, `enable javascript and cookies`.
 
 **Rate limiting:** минимум 2 секунды между запросами к одному домену.
 
@@ -182,21 +190,26 @@ HEADERS = {
 1.  Пользователь вводит URL в UI
 2.  UI → POST /scan → FastAPI
 3.  FastAPI → Scanner.scan(url)
-4.  Scanner → PlaywrightWrapper.scan(url) → (html, network_log, robots_warning)
+4.  Scanner → PlaywrightWrapper.scan(url) → (html, network_log, robots_warning, waf_blocked)
     robots_warning=True если robots.txt ограничивает доступ — НЕ прерывает скан
-5.  Scanner → BeautifulSoup(html) → soup
-6.  Scanner → DetectorEngine.run_all(soup, network_log)
-7.  DetectorEngine читает law_base/blocks/*.yaml (загружены при инициализации)
-8.  DetectorEngine → для каждого enabled детектора:
+    waf_blocked=True если WAF вернул challenge-страницу вместо реального сайта
+5.  Если waf_blocked=True → violations=[], blocked_excerpt=текст challenge-страницы[:1500]
+    Если waf_blocked=False → BeautifulSoup(html) → soup → DetectorEngine.run_all(soup, network_log)
+6.  DetectorEngine читает law_base/blocks/*.yaml (загружены при инициализации)
+7.  DetectorEngine → для каждого enabled детектора:
     a. detector.detect(soup, network_log) → результат
     b. Если детектор упал → логируем, продолжаем следующий
-9.  Движок применяет зависимости (B1/B2 логика)
-10. Scanner возвращает (violations, robots_warning) в FastAPI
-11. FastAPI → ReportEngine.build(violations, url, robots_warning) → отчёт JSON
-12. Отчёт содержит обязательный disclaimer + опциональный robots_warning (см. ниже)
+8.  Движок применяет зависимости (B1/B2 логика)
+9.  Scanner возвращает (violations, robots_warning, waf_blocked, blocked_excerpt) в FastAPI
+10. FastAPI → ReportEngine.build(violations, url, robots_warning, waf_blocked, blocked_excerpt) → отчёт JSON
+11. Если waf_blocked=True → отчёт: violations=[], status="waf_blocked", blocked_excerpt=...
+    Если waf_blocked=False → отчёт с полным набором violations/recommendations
+12. Отчёт содержит обязательный disclaimer
 13. [post-MVP] FastAPI сохраняет результат в DB (история)
 14. FastAPI возвращает отчёт в UI
-15. UI отображает нарушения / рекомендации + баннер если robots_warning=True
+15. UI: если waf_blocked=True → фиолетовый блок с объяснением + pre с blocked_excerpt, нарушения скрыты
+    UI: если robots_warning=True && !waf_blocked → синий информационный баннер
+    UI: иначе → нарушения / рекомендации / compliant
 ```
 
 ---
@@ -249,6 +262,8 @@ HEADERS = {
   "url": "https://example.com",
   "scanned_at": "2026-05-22T10:00:00+00:00",
   "robots_warning": false,
+  "waf_blocked": false,
+  "blocked_excerpt": "",
   "summary": {
     "status": "violations_found",
     "violations_count": 2,
@@ -260,10 +275,17 @@ HEADERS = {
 }
 ```
 
-`status`: `"compliant"` | `"recommendations_only"` | `"violations_found"`
+`status`: `"compliant"` | `"recommendations_only"` | `"violations_found"` | `"waf_blocked"`
 
-`robots_warning`: `false` (по умолчанию) | `true` — robots.txt ограничивает автоматический
-доступ. Скан выполнен, отчёт полный. UI показывает информационный баннер.
+`robots_warning`: `false` | `true` — robots.txt ограничивает автоматический доступ.
+Скан выполнен, отчёт полный. UI показывает синий информационный баннер (только если !waf_blocked).
+
+`waf_blocked`: `false` | `true` — WAF вернул challenge-страницу вместо реального сайта.
+При `true`: `violations=[]`, `recommendations=[]`, `status="waf_blocked"`.
+UI скрывает violations и показывает фиолетовый блок с объяснением + `blocked_excerpt`.
+
+`blocked_excerpt`: текст challenge-страницы (первые 1500 символов, без HTML-тегов).
+Пусто если `waf_blocked=false`.
 
 ---
 

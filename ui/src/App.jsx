@@ -18,6 +18,7 @@ const STATUS_META = {
   violations_found:    { text: 'Найдены нарушения',       color: '#dc2626', bg: '#fef2f2' },
   recommendations_only:{ text: 'Только рекомендации',     color: '#d97706', bg: '#fffbeb' },
   compliant:           { text: 'Нарушений не найдено',    color: '#16a34a', bg: '#f0fdf4' },
+  waf_blocked:         { text: 'Сайт заблокировал сканер', color: '#7c3aed', bg: '#f5f3ff' },
 }
 
 function Badge({ severity }) {
@@ -189,14 +190,39 @@ export default function App() {
       {result && statusMeta && (
         <div>
           {result.waf_blocked && (
-            <div style={{
-              background: '#fef2f2', border: '1px solid #fca5a5',
-              borderRadius: 6, padding: '10px 14px',
-              marginBottom: 14, fontSize: 13, color: '#991b1b',
-            }}>
-              <strong>Внимание:</strong> Сайт защищён WAF (DDoS-Guard, Cloudflare и т.п.),
-              который заблокировал сканер. Результаты ниже могут быть недостоверными —
-              они получены с challenge-страницы, а не с реального сайта.
+            <div style={{ marginBottom: 20 }}>
+              <div style={{
+                background: '#f5f3ff', border: '1.5px solid #7c3aed',
+                borderRadius: 8, padding: '14px 16px', marginBottom: 12,
+                fontSize: 14, color: '#4c1d95',
+              }}>
+                <strong>Сканер заблокирован защитой сайта (WAF)</strong>
+                <p style={{ margin: '8px 0 4px', fontSize: 13, color: '#5b21b6' }}>
+                  Сайт использует систему защиты от автоматических запросов (DDoS-Guard, Cloudflare
+                  и аналоги). Сканер получил страницу-заглушку, а не реальный сайт.
+                  Проверить нарушения 152-ФЗ невозможно — анализ не проводился.
+                </p>
+                <p style={{ margin: 0, fontSize: 13, color: '#5b21b6' }}>
+                  <strong>Что делать:</strong> запустите сканер с IP-адреса самого сайта
+                  (с хостингового сервера), либо обратитесь к владельцу сайта.
+                </p>
+              </div>
+              {result.blocked_excerpt && (
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>
+                    Что увидел сканер вместо сайта:
+                  </div>
+                  <pre style={{
+                    background: '#f8fafc', border: '1px solid #e2e8f0',
+                    borderRadius: 6, padding: '12px 14px',
+                    fontSize: 12, color: '#374151', whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word', maxHeight: 300, overflowY: 'auto',
+                    margin: 0,
+                  }}>
+                    {result.blocked_excerpt}
+                  </pre>
+                </div>
+              )}
             </div>
           )}
           {result.robots_warning && !result.waf_blocked && (
@@ -235,7 +261,7 @@ export default function App() {
             )}
           </div>
 
-          {result.violations.length > 0 && (
+          {!result.waf_blocked && result.violations.length > 0 && (
             <section style={{ marginBottom: 28 }}>
               <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#dc2626' }}>
                 Нарушения ({result.violations.length})
@@ -246,7 +272,7 @@ export default function App() {
             </section>
           )}
 
-          {result.recommendations.length > 0 && (
+          {!result.waf_blocked && result.recommendations.length > 0 && (
             <section style={{ marginBottom: 28 }}>
               <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#d97706' }}>
                 Рекомендации ({result.recommendations.length})
@@ -260,7 +286,7 @@ export default function App() {
             </section>
           )}
 
-          {result.summary.status === 'compliant' && (
+          {!result.waf_blocked && result.summary.status === 'compliant' && (
             <div style={{
               background: '#f0fdf4', border: '1px solid #86efac',
               borderRadius: 8, padding: 16, marginBottom: 20, fontSize: 14, color: '#166534',

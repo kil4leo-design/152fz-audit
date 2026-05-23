@@ -1,7 +1,7 @@
 # roadmap.md — Дорожная карта
 
 > Статус обновляется по мере выполнения этапов.
-> Последнее обновление: 2026-05-23 (сессия 9)
+> Последнее обновление: 2026-05-23 (сессия 10)
 
 ---
 
@@ -102,18 +102,17 @@
 ---
 
 ## Этап 3 — Доработка UI и подготовка к релизу
-**Статус:** 🔲 Не начат
+**Статус:** 🔄 В работе
 
 ### Цель
 Полноценный веб-сервис готовый к онлайн-деплою.
 
 ### Задачи — Доработка сканера
-- [ ] robots.txt Вариант B — предупреждение вместо блокировки (решение зафиксировано в decisions.md сессия 9)
-  - `playwright_wrapper.py`: scan() → tuple[str, list[dict], bool], убрать RobotsDisallowedError
-  - `scanner.py`: пробросить robots_warning наружу
-  - `report/engine.py`: build(violations, url, robots_warning=False) → поле в отчёте
-  - `api/main.py`: убрать except RobotsDisallowedError / 403
-  - `ui/App.jsx`: баннер при result.robots_warning === true
+- [x] robots.txt Вариант B — предупреждение вместо блокировки (сессия 9)
+- [x] Stealth mode — обход WAF fingerprint-детекции (сессия 9)
+  - `--disable-blink-features=AutomationControlled`, init_script, два UA
+- [x] WAF detection — `waf_blocked` flag в отчёте (сессия 9)
+- [x] При `waf_blocked=True` скрыть violations, показать blocked_excerpt (сессия 10)
 
 ### Задачи — UI
 - [ ] Выбор блоков проверки (А-Ж) или полная проверка — переключатель в UI

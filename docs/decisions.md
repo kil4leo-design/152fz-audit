@@ -362,10 +362,47 @@ DetectorEngine и браузер создаются один раз при ст�
 - Аналог: Google Search Console позволяет владельцу проверить закрытую страницу.
 - Игнорировать robots.txt полностью — нечестно. Предупреждать — прозрачно.
 
-**Изменения в коде (не реализовано, зафиксировано для следующей сессии):**
-- `scanner/playwright_wrapper.py` → `scan()` возвращает `tuple[str, list[dict], bool]`; убрать `RobotsDisallowedError`
-- `scanner/scanner.py` → `scan()` возвращает `tuple[list[dict], bool]` (violations + robots_warning)
-- `report/engine.py` → `build(violations, url, robots_warning=False)` добавляет поле в отчёт
-- `api/main.py` → убрать `except RobotsDisallowedError` / 403; передавать `robots_warning` в `build()`
-- `ui/src/App.jsx` → показывать баннер если `result.robots_warning === true`
+**Изменения реализованы (сессия 9):**
+- `scanner/playwright_wrapper.py` → `scan()` возвращает `tuple[str, list[dict], bool, bool]`; убран `RobotsDisallowedError`
+- `scanner/scanner.py` → `scan()` возвращает `tuple[list[dict], bool, bool, str]`
+- `report/engine.py` → `build(violations, url, robots_warning, waf_blocked, blocked_excerpt)`
+- `api/main.py` → убран `except RobotsDisallowedError` / 403
+- `ui/src/App.jsx` → синий баннер если `result.robots_warning && !result.waf_blocked`
+
+### Stealth mode + WAF detection (сессия 9)
+
+**Контекст:** DDoS-Guard и Cloudflare детектируют headless Playwright по `navigator.webdriver=true`
+и специфичным fingerprints, возвращая challenge-страницу вместо реального сайта.
+
+**Решение stealth:**
+- `--disable-blink-features=AutomationControlled` в launch args Chromium
+- `_STEALTH_SCRIPT` (init_script): патч `navigator.webdriver`, `navigator.plugins`, `window.chrome`, `navigator.languages`
+- Два UA: `_ROBOTS_UA` (честный bot) для robots.txt, `_PAGE_UA` (Chrome 124) для страниц
+- `context.add_init_script()` до первого `page.goto()`
+
+**WAF detection:** `_is_waf_blocked(status, html)` — возвращает True если status in (403, 503)
+AND html содержит WAF-сигнатуру. Нестабилен: DDoS-Guard иногда пропускает stealth-запросы.
+
+---
+
+## Технические решения — сессия 10 (2026-05-23)
+
+### waf_blocked=True → violations не показываются, показывается blocked_excerpt
+
+**Проблема:** при `waf_blocked=True` сканер анализировал challenge-страницу WAF, а не реальный сайт.
+A1 и другие детекторы не находили ничего на challenge-странице и фиксировали ложные нарушения.
+Пользователь видел список нарушений, которых на реальном сайте нет.
+
+**Решение:** при `waf_blocked=True`:
+1. `scanner/scanner.py`: детекторы не запускаются → `violations=[]`, `blocked_excerpt` = текст challenge-страницы[:1500]
+2. `report/engine.py`: при `waf_blocked=True` возвращает `violations=[]`, `status="waf_blocked"`, `blocked_excerpt=...`
+3. `ui/src/App.jsx`: скрывает секции violations/recommendations, показывает фиолетовый блок с:
+   - объяснением что произошло и почему
+   - инструкцией что делать (запустить с IP сайта)
+   - `<pre>` с тем, что реально увидел сканер (blocked_excerpt)
+
+**Правило:** при `waf_blocked=True` любые violations являются ложными по определению —
+сканер не видел реальный сайт. Показывать их пользователю нельзя.
+
+**Изменённые файлы:** `scanner/scanner.py`, `report/engine.py`, `api/main.py`, `ui/src/App.jsx`.
 

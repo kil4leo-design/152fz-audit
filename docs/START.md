@@ -43,11 +43,12 @@ https://github.com/kil4leo-design/152fz-audit
 
 ## Текущий статус
 
-**Дата обновления:** 2026-05-23 (сессия 9)
+**Дата обновления:** 2026-05-23 (сессия 10)
 
 **Завершены:** Этап 0, Этап 1, Этап 2 (полностью).
 Law Base MVP (A/B/C.yaml), BaseDetector, DetectorEngine, детекторы A1+B1+B2+B3+C1,
-PlaywrightWrapper, Scanner, ReportEngine (JSON), FastAPI (POST /scan + GET /health + CORS),
+PlaywrightWrapper (stealth mode, robots.txt Вариант B, WAF detection),
+Scanner, ReportEngine (JSON), FastAPI (POST /scan + GET /health + CORS),
 React UI (Vite + React 18), тесты 19/19.
 
 **Запуск продукта (два терминала):**
@@ -61,6 +62,5 @@ cd ui && npm run dev
 ```
 
 **В работе:** Этап 3.
-**Следующий шаг:** robots.txt Вариант B — решение зафиксировано в decisions.md (сессия 9).
-Реализация: 5 файлов (playwright_wrapper, scanner, report/engine, api/main, ui/App.jsx).
-Подробно — в decisions.md раздел "Технические решения — сессия 9".
+**Следующий шаг:** C1 детектор + история проверок (модуль History).
+Подробно — в decisions.md раздел "Технические решения — сессия 9, 10".
