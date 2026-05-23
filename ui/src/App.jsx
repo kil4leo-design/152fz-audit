@@ -188,7 +188,18 @@ export default function App() {
 
       {result && statusMeta && (
         <div>
-          {result.robots_warning && (
+          {result.waf_blocked && (
+            <div style={{
+              background: '#fef2f2', border: '1px solid #fca5a5',
+              borderRadius: 6, padding: '10px 14px',
+              marginBottom: 14, fontSize: 13, color: '#991b1b',
+            }}>
+              <strong>Внимание:</strong> Сайт защищён WAF (DDoS-Guard, Cloudflare и т.п.),
+              который заблокировал сканер. Результаты ниже могут быть недостоверными —
+              они получены с challenge-страницы, а не с реального сайта.
+            </div>
+          )}
+          {result.robots_warning && !result.waf_blocked && (
             <div style={{
               background: '#eff6ff', border: '1px solid #93c5fd',
               borderRadius: 6, padding: '10px 14px',

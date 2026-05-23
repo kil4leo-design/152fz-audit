@@ -47,19 +47,19 @@ class Scanner:
     async def __aexit__(self, *args: Any) -> None:
         await self._pw.__aexit__(*args)
 
-    async def scan(self, url: str) -> tuple[list[dict], bool]:
+    async def scan(self, url: str) -> tuple[list[dict], bool, bool]:
         """
-        Загрузить страницу по URL и вернуть (violations, robots_warning).
+        Загрузить страницу по URL и вернуть (violations, robots_warning, waf_blocked).
 
-        robots_warning=True если robots.txt ограничивает доступ — скан выполнен,
-        Report Engine добавит предупреждение в отчёт.
+        robots_warning=True если robots.txt ограничивает доступ (Вариант B).
+        waf_blocked=True если WAF вернул challenge-страницу — результаты ненадёжны.
 
         :raises RuntimeError: если вызвано вне async with
         :raises PlaywrightError: ошибка загрузки страницы (сеть, таймаут и т.д.)
-        :return: (список нарушений, флаг robots_warning)
+        :return: (список нарушений, robots_warning, waf_blocked)
         """
-        html, network_log, robots_warning = await self._pw.scan(url)
+        html, network_log, robots_warning, waf_blocked = await self._pw.scan(url)
         soup = BeautifulSoup(html, "html.parser")
         # run_all синхронный; A1 делает HTTP-запросы внутри — запускаем в thread
         violations = await asyncio.to_thread(self._engine.run_all, soup, network_log)
-        return violations, robots_warning
+        return violations, robots_warning, waf_blocked

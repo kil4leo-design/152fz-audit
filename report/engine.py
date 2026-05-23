@@ -19,13 +19,19 @@ DISCLAIMER = (
 )
 
 
-def build(violations: list[dict], url: str, robots_warning: bool = False) -> dict:
+def build(
+    violations: list[dict],
+    url: str,
+    robots_warning: bool = False,
+    waf_blocked: bool = False,
+) -> dict:
     """
     Собрать отчёт из списка нарушений.
 
     :param violations: список нарушений из Scanner.scan() / DetectorEngine.run_all()
     :param url: сканируемый URL
-    :param robots_warning: True если robots.txt ограничивает доступ (стратегия Вариант B)
+    :param robots_warning: True если robots.txt ограничивает доступ (Вариант B)
+    :param waf_blocked: True если WAF вернул challenge-страницу — результаты ненадёжны
     :return: JSON-сериализуемый словарь отчёта
     """
     found = [v for v in violations if not v.get("is_recommendation", False)]
@@ -42,6 +48,7 @@ def build(violations: list[dict], url: str, robots_warning: bool = False) -> dic
         "url": url,
         "scanned_at": datetime.now(tz=timezone.utc).isoformat(),
         "robots_warning": robots_warning,
+        "waf_blocked": waf_blocked,
         "summary": {
             "status": status,
             "violations_count": len(found),
