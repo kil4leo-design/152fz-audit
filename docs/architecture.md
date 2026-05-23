@@ -275,6 +275,9 @@ Chromium запускается с `--disable-blink-features=AutomationControlle
 }
 ```
 
+`passed`: список пройденных проверок — детекторы, не нашедшие нарушений.
+Каждый элемент: `{id, name, severity, legal_ref}`. Пусто при `waf_blocked=True`.
+
 `status`: `"compliant"` | `"recommendations_only"` | `"violations_found"` | `"waf_blocked"`
 
 `robots_warning`: `false` | `true` — robots.txt ограничивает автоматический доступ.

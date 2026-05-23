@@ -113,6 +113,7 @@
   - `--disable-blink-features=AutomationControlled`, init_script, два UA
 - [x] WAF detection — `waf_blocked` flag в отчёте (сессия 9)
 - [x] При `waf_blocked=True` скрыть violations, показать blocked_excerpt (сессия 10)
+- [x] Показывать пройденные проверки (passed) наравне с нарушениями (сессия 10)
 
 ### Задачи — UI
 - [ ] Выбор блоков проверки (А-Ж) или полная проверка — переключатель в UI
