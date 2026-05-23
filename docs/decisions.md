@@ -343,3 +343,29 @@ DetectorEngine и браузер создаются один раз при ст�
 ### ReportEngine.build() — разделение violations/recommendations
 Поле `is_recommendation` (bool) — единственный разделитель. Нарушения и рекомендации разделяются в `build()`, не в детекторах. `status`: `"compliant"` | `"recommendations_only"` | `"violations_found"`.
 
+---
+
+## Технические решения — сессия 9 (2026-05-23)
+
+### robots.txt — стратегия Вариант B: предупреждение вместо блокировки
+
+**Контекст:** ya.ru и ряд других крупных сайтов блокируют наш User-Agent через robots.txt.
+Текущая реализация бросает `RobotsDisallowedError` → API возвращает 403 → пользователь не получает отчёт.
+
+**Решение:** `PlaywrightWrapper.scan()` возвращает `robots_warning: bool` вместо исключения.
+Сканирование выполняется всегда. `RobotsDisallowedError` и 403 — убираются.
+Отчёт содержит поле `robots_warning: true/false`. UI показывает информационный баннер.
+
+**Обоснование:**
+- Целевой пользователь — владелец сайта, проверяющий свой ресурс. Он авторизован.
+- robots.txt — конвенция для веб-краулеров (поисковые боты, парсеры). Не запрет на compliance-аудит.
+- Аналог: Google Search Console позволяет владельцу проверить закрытую страницу.
+- Игнорировать robots.txt полностью — нечестно. Предупреждать — прозрачно.
+
+**Изменения в коде (не реализовано, зафиксировано для следующей сессии):**
+- `scanner/playwright_wrapper.py` → `scan()` возвращает `tuple[str, list[dict], bool]`; убрать `RobotsDisallowedError`
+- `scanner/scanner.py` → `scan()` возвращает `tuple[list[dict], bool]` (violations + robots_warning)
+- `report/engine.py` → `build(violations, url, robots_warning=False)` добавляет поле в отчёт
+- `api/main.py` → убрать `except RobotsDisallowedError` / 403; передавать `robots_warning` в `build()`
+- `ui/src/App.jsx` → показывать баннер если `result.robots_warning === true`
+

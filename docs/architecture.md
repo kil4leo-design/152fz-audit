@@ -128,11 +128,25 @@ B2 приоритетнее, B1 для той же формы убирается
 
 ## PlaywrightWrapper — обязательное поведение
 
+### Стратегия robots.txt — Вариант B (зафиксировано сессия 9)
+
+Инструмент проверяет ПУБЛИЧНОЕ соответствие закону. Целевой пользователь — владелец сайта,
+проверяющий свой ресурс. robots.txt — конвенция для веб-краулеров, не запрет на compliance-аудит.
+
+**Решение:** не блокировать при запрещающем robots.txt, а сканировать с предупреждением.
+`PlaywrightWrapper.scan()` возвращает `robots_warning=True` если robots.txt ограничивает доступ.
+API не возвращает 403 — возвращает полный отчёт с дополнительным полем `robots_warning`.
+UI отображает информационный баннер: «robots.txt ограничивает автоматический доступ —
+убедитесь, что вы имеете право на проверку этого сайта».
+
+**Почему не игнорировать robots.txt полностью:**
+Прозрачность важна — пользователь должен знать, что проверка выполнена вне ограничений.
+Ответственность остаётся на пользователе (он авторизован проверять свой сайт).
+
 ```python
-async def scan(url: str) -> tuple[str, list[dict]]:
-    # 1. Проверить robots.txt
-    if not robots_allowed(url):
-        raise RobotsDisallowedError(url)
+async def scan(url: str) -> tuple[str, list[dict], bool]:
+    # 1. Проверить robots.txt — NOT raises, returns warning flag
+    robots_warning = not (await _robots_allowed(url))
 
     # 2. Настроить перехват сети
     network_log = []
@@ -142,13 +156,13 @@ async def scan(url: str) -> tuple[str, list[dict]]:
         "timestamp": time.time()
     }))
 
-    # 3. Загрузить страницу
+    # 3. Загрузить страницу (всегда, независимо от robots.txt)
     await page.goto(url, wait_until="networkidle", timeout=30000)
     await page.wait_for_timeout(2000)  # динамический контент
 
-    # 4. Вернуть HTML + network_log
+    # 4. Вернуть HTML + network_log + robots_warning
     html = await page.content()
-    return html, network_log
+    return html, network_log, robots_warning
 ```
 
 **Обязательные заголовки:**
@@ -168,21 +182,21 @@ HEADERS = {
 1.  Пользователь вводит URL в UI
 2.  UI → POST /scan → FastAPI
 3.  FastAPI → Scanner.scan(url)
-4.  Scanner → robots.txt check (если запрещён → вернуть ошибку)
-5.  Scanner → PlaywrightWrapper.scan(url) → (html, network_log)
-6.  Scanner → BeautifulSoup(html) → soup
-7.  Scanner → DetectorEngine.run_all(soup, network_log)
-8.  DetectorEngine читает law_base/blocks/*.yaml (загружены при инициализации)
-9.  DetectorEngine → для каждого enabled детектора:
+4.  Scanner → PlaywrightWrapper.scan(url) → (html, network_log, robots_warning)
+    robots_warning=True если robots.txt ограничивает доступ — НЕ прерывает скан
+5.  Scanner → BeautifulSoup(html) → soup
+6.  Scanner → DetectorEngine.run_all(soup, network_log)
+7.  DetectorEngine читает law_base/blocks/*.yaml (загружены при инициализации)
+8.  DetectorEngine → для каждого enabled детектора:
     a. detector.detect(soup, network_log) → результат
     b. Если детектор упал → логируем, продолжаем следующий
-10. Движок применяет зависимости (B1/B2 логика)
-11. Scanner возвращает список нарушений + evidence в FastAPI
-12. FastAPI → ReportEngine.build(violations) → отчёт JSON + HTML
-13. Отчёт содержит обязательный disclaimer (см. ниже)
-14. [post-MVP] FastAPI сохраняет результат в DB (история)
-15. FastAPI возвращает отчёт в UI
-16. UI отображает нарушения / рекомендации
+9.  Движок применяет зависимости (B1/B2 логика)
+10. Scanner возвращает (violations, robots_warning) в FastAPI
+11. FastAPI → ReportEngine.build(violations, url, robots_warning) → отчёт JSON
+12. Отчёт содержит обязательный disclaimer + опциональный robots_warning (см. ниже)
+13. [post-MVP] FastAPI сохраняет результат в DB (история)
+14. FastAPI возвращает отчёт в UI
+15. UI отображает нарушения / рекомендации + баннер если robots_warning=True
 ```
 
 ---
@@ -234,6 +248,7 @@ HEADERS = {
 {
   "url": "https://example.com",
   "scanned_at": "2026-05-22T10:00:00+00:00",
+  "robots_warning": false,
   "summary": {
     "status": "violations_found",
     "violations_count": 2,
@@ -246,6 +261,9 @@ HEADERS = {
 ```
 
 `status`: `"compliant"` | `"recommendations_only"` | `"violations_found"`
+
+`robots_warning`: `false` (по умолчанию) | `true` — robots.txt ограничивает автоматический
+доступ. Скан выполнен, отчёт полный. UI показывает информационный баннер.
 
 ---
 

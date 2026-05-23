@@ -107,7 +107,18 @@
 ### Цель
 Полноценный веб-сервис готовый к онлайн-деплою.
 
-### Задачи
+### Задачи — Доработка сканера
+- [ ] robots.txt Вариант B — предупреждение вместо блокировки (решение зафиксировано в decisions.md сессия 9)
+  - `playwright_wrapper.py`: scan() → tuple[str, list[dict], bool], убрать RobotsDisallowedError
+  - `scanner.py`: пробросить robots_warning наружу
+  - `report/engine.py`: build(violations, url, robots_warning=False) → поле в отчёте
+  - `api/main.py`: убрать except RobotsDisallowedError / 403
+  - `ui/App.jsx`: баннер при result.robots_warning === true
+
+### Задачи — UI
+- [ ] Выбор блоков проверки (А-Ж) или полная проверка — переключатель в UI
+
+### Задачи — Прочее
 - [ ] Доработка UI на основе обратной связи от первых пользователей
 - [ ] История проверок (модуль History)
 - [ ] Подготовка к онлайн-деплою
