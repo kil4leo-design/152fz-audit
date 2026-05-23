@@ -25,6 +25,7 @@ def build(
     robots_warning: bool = False,
     waf_blocked: bool = False,
     blocked_excerpt: str = "",
+    passed: list[dict] | None = None,
 ) -> dict:
     """
     Собрать отчёт из списка нарушений.
@@ -36,6 +37,8 @@ def build(
     :param blocked_excerpt: первые 1500 символов текста challenge-страницы (если waf_blocked)
     :return: JSON-сериализуемый словарь отчёта
     """
+    passed = passed or []
+
     if waf_blocked:
         return {
             "url": url,
@@ -43,9 +46,10 @@ def build(
             "robots_warning": robots_warning,
             "waf_blocked": True,
             "blocked_excerpt": blocked_excerpt,
-            "summary": {"status": "waf_blocked", "violations_count": 0, "recommendations_count": 0},
+            "summary": {"status": "waf_blocked", "violations_count": 0, "recommendations_count": 0, "passed_count": 0},
             "violations": [],
             "recommendations": [],
+            "passed": [],
             "disclaimer": DISCLAIMER,
         }
 
@@ -69,8 +73,10 @@ def build(
             "status": status,
             "violations_count": len(found),
             "recommendations_count": len(recommendations),
+            "passed_count": len(passed),
         },
         "violations": found,
         "recommendations": recommendations,
+        "passed": passed,
         "disclaimer": DISCLAIMER,
     }

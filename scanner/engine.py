@@ -219,7 +219,9 @@ class DetectorEngine:
 
     # ── Прогон детекторов ─────────────────────────────────────────────────────
 
-    def run_all(self, soup: BeautifulSoup, network_log: list[dict]) -> list[dict]:
+    def run_all(
+        self, soup: BeautifulSoup, network_log: list[dict]
+    ) -> tuple[list[dict], list[dict]]:
         """
         Прогнать все enabled зарегистрированные детекторы.
 
@@ -231,9 +233,10 @@ class DetectorEngine:
 
         :param soup: BeautifulSoup-дерево HTML страницы
         :param network_log: список сетевых запросов от PlaywrightWrapper
-        :return: список нарушений (может быть пустым)
+        :return: (violations, passed) — нарушения и пройденные проверки
         """
         results: list[dict] = []
+        passed: list[dict] = []
 
         for violation_config in self._violations:
             vid = violation_config.get("id", "?")
@@ -242,10 +245,17 @@ class DetectorEngine:
                 found = detector.detect(soup, network_log)
                 if found:
                     results.extend(found)
+                else:
+                    passed.append({
+                        "id": violation_config["id"],
+                        "name": violation_config["name"],
+                        "severity": violation_config["severity"],
+                        "legal_ref": violation_config["legal_ref"],
+                    })
             except Exception:
                 logger.exception("Детектор %s упал, продолжаем", vid)
 
-        return self._apply_b_mutex(results)
+        return self._apply_b_mutex(results), passed
 
     @staticmethod
     def _apply_b_mutex(results: list[dict]) -> list[dict]:

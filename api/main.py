@@ -63,11 +63,11 @@ async def scan(body: ScanRequest, req: Request) -> dict:
     """
     url = str(body.url)
     try:
-        violations, robots_warning, waf_blocked, blocked_excerpt = await req.app.state.scanner.scan(url)
+        violations, passed, robots_warning, waf_blocked, blocked_excerpt = await req.app.state.scanner.scan(url)
     except Exception as exc:
         logger.exception("Ошибка сканирования %s", url)
         raise HTTPException(status_code=500, detail=str(exc))
-    return build_report(violations, url, robots_warning, waf_blocked, blocked_excerpt)
+    return build_report(violations, url, robots_warning, waf_blocked, blocked_excerpt, passed)
 
 
 @app.get("/health")

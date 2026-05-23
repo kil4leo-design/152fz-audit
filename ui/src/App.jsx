@@ -61,6 +61,29 @@ function FineTable({ fine }) {
   )
 }
 
+function PassedCard({ p }) {
+  return (
+    <div style={{
+      border: '2px solid #16a34a', borderRadius: 8, padding: '12px 16px',
+      marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12,
+    }}>
+      <span style={{
+        background: '#16a34a', color: '#fff',
+        borderRadius: 4, padding: '2px 8px',
+        fontSize: 12, fontWeight: 600, flexShrink: 0,
+      }}>
+        ✓ Пройдено
+      </span>
+      <div>
+        <strong style={{ fontSize: 14 }}>{p.id}: {p.name}</strong>
+        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+          {p.legal_ref.law}, {p.legal_ref.article}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ViolationCard({ v, isRecommendation }) {
   const borderColor = isRecommendation ? SEVERITY_COLOR.warning : (SEVERITY_COLOR[v.severity] || '#6b7280')
   return (
@@ -259,6 +282,11 @@ export default function App() {
                 Рекомендаций: <strong>{result.summary.recommendations_count}</strong>
               </span>
             )}
+            {result.summary.passed_count > 0 && (
+              <span style={{ fontSize: 13, color: '#6b7280' }}>
+                Пройдено: <strong style={{ color: '#16a34a' }}>{result.summary.passed_count}</strong>
+              </span>
+            )}
           </div>
 
           {!result.waf_blocked && result.violations.length > 0 && (
@@ -282,6 +310,17 @@ export default function App() {
               </p>
               {result.recommendations.map((v, i) => (
                 <ViolationCard key={i} v={v} isRecommendation={true} />
+              ))}
+            </section>
+          )}
+
+          {!result.waf_blocked && result.passed && result.passed.length > 0 && (
+            <section style={{ marginBottom: 28 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#16a34a' }}>
+                Пройденные проверки ({result.passed.length})
+              </h2>
+              {result.passed.map((p, i) => (
+                <PassedCard key={i} p={p} />
               ))}
             </section>
           )}
