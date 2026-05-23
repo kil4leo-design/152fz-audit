@@ -6,7 +6,7 @@ scanner/scanner.py — Оркестратор сканирования.
 
 Использование (скрипт):
     async with Scanner() as s:
-        violations = await s.scan("https://example.com")
+        violations, robots_warning = await s.scan("https://example.com")
 
 Использование (FastAPI lifespan):
     @asynccontextmanager
@@ -23,9 +23,9 @@ from typing import Any
 from bs4 import BeautifulSoup
 
 from scanner.engine import DetectorEngine
-from scanner.playwright_wrapper import PlaywrightWrapper, RobotsDisallowedError
+from scanner.playwright_wrapper import PlaywrightWrapper
 
-__all__ = ["Scanner", "RobotsDisallowedError"]
+__all__ = ["Scanner"]
 
 
 class Scanner:
@@ -47,16 +47,19 @@ class Scanner:
     async def __aexit__(self, *args: Any) -> None:
         await self._pw.__aexit__(*args)
 
-    async def scan(self, url: str) -> list[dict]:
+    async def scan(self, url: str) -> tuple[list[dict], bool]:
         """
-        Загрузить страницу по URL и вернуть список нарушений 152-ФЗ.
+        Загрузить страницу по URL и вернуть (violations, robots_warning).
 
-        :raises RobotsDisallowedError: если robots.txt запрещает сканирование
+        robots_warning=True если robots.txt ограничивает доступ — скан выполнен,
+        Report Engine добавит предупреждение в отчёт.
+
         :raises RuntimeError: если вызвано вне async with
         :raises PlaywrightError: ошибка загрузки страницы (сеть, таймаут и т.д.)
-        :return: список нарушений в формате из architecture.md
+        :return: (список нарушений, флаг robots_warning)
         """
-        html, network_log = await self._pw.scan(url)
+        html, network_log, robots_warning = await self._pw.scan(url)
         soup = BeautifulSoup(html, "html.parser")
         # run_all синхронный; A1 делает HTTP-запросы внутри — запускаем в thread
-        return await asyncio.to_thread(self._engine.run_all, soup, network_log)
+        violations = await asyncio.to_thread(self._engine.run_all, soup, network_log)
+        return violations, robots_warning

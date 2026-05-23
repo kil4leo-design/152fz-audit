@@ -188,6 +188,17 @@ export default function App() {
 
       {result && statusMeta && (
         <div>
+          {result.robots_warning && (
+            <div style={{
+              background: '#eff6ff', border: '1px solid #93c5fd',
+              borderRadius: 6, padding: '10px 14px',
+              marginBottom: 14, fontSize: 13, color: '#1e40af',
+            }}>
+              <strong>Информация:</strong> robots.txt этого сайта ограничивает автоматический
+              доступ. Убедитесь, что вы имеете право на проверку данного сайта.
+              Результаты проверки действительны.
+            </div>
+          )}
           <div style={{
             background: statusMeta.bg,
             border: `1.5px solid ${statusMeta.color}`,

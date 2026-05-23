@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import AnyHttpUrl, BaseModel
 
 from report.engine import build as build_report
-from scanner.scanner import RobotsDisallowedError, Scanner
+from scanner.scanner import Scanner
 
 logger = logging.getLogger(__name__)
 
@@ -56,19 +56,18 @@ async def scan(body: ScanRequest, req: Request) -> dict:
     """
     Сканировать URL и вернуть отчёт о нарушениях 152-ФЗ.
 
-    - **403** — robots.txt запрещает сканирование
     - **422** — невалидный URL
     - **500** — ошибка загрузки страницы (сеть, таймаут и т.д.)
+
+    robots.txt не блокирует скан — отчёт содержит поле robots_warning если доступ ограничен.
     """
     url = str(body.url)
     try:
-        violations = await req.app.state.scanner.scan(url)
-    except RobotsDisallowedError:
-        raise HTTPException(status_code=403, detail="robots.txt запрещает сканирование этого URL")
+        violations, robots_warning = await req.app.state.scanner.scan(url)
     except Exception as exc:
         logger.exception("Ошибка сканирования %s", url)
         raise HTTPException(status_code=500, detail=str(exc))
-    return build_report(violations, url)
+    return build_report(violations, url, robots_warning)
 
 
 @app.get("/health")

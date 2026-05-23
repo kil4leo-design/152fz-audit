@@ -2,16 +2,20 @@
 scanner/playwright_wrapper.py — Playwright wrapper для загрузки страниц.
 
 Ответственности:
-1. Проверка robots.txt перед любым сканированием
+1. Проверка robots.txt — возвращает предупреждение (не блокирует скан)
 2. Перехват всех исходящих сетевых запросов (network_log)
 3. Загрузка страницы (networkidle + 2 секунды для динамического контента)
 4. Rate limiting — минимум 2 секунды между запросами к одному домену
+
+Стратегия robots.txt (Вариант B, сессия 9):
+Сканирование выполняется всегда — целевой пользователь проверяет свой сайт.
+robots_warning=True сигнализирует Report Engine добавить предупреждение в отчёт.
 
 Поведение зафиксировано в architecture.md → раздел "PlaywrightWrapper".
 
 Использование:
     async with PlaywrightWrapper() as pw:
-        html, network_log = await pw.scan("https://example.com")
+        html, network_log, robots_warning = await pw.scan("https://example.com")
 """
 from __future__ import annotations
 
@@ -26,10 +30,6 @@ from playwright.async_api import Browser, async_playwright
 _UA = "Mozilla/5.0 (compatible; 152fz-audit/1.0; +https://github.com/kil4leo-design/152fz-audit)"
 _RATE_LIMIT_SECONDS = 2.0
 _ROBOTS_TIMEOUT_SECONDS = 5.0
-
-
-class RobotsDisallowedError(Exception):
-    """Поднимается когда robots.txt запрещает сканирование URL."""
 
 
 class PlaywrightWrapper:
@@ -61,16 +61,18 @@ class PlaywrightWrapper:
         if self._playwright:
             await self._playwright.stop()
 
-    async def scan(self, url: str) -> tuple[str, list[dict]]:
+    async def scan(self, url: str) -> tuple[str, list[dict], bool]:
         """
-        Загрузить страницу и вернуть (html, network_log).
+        Загрузить страницу и вернуть (html, network_log, robots_warning).
+
+        robots_warning=True если robots.txt ограничивает доступ — скан выполняется всегда.
+        Стратегия Вариант B: владелец проверяет свой сайт, блокировка неуместна.
 
         Конвенция network_log:
         - network_log[0] — запрос к сканируемой странице (используется детектором A1
           для построения base_url при проверке known_urls)
         - Каждый элемент: {"url": str, "domain": str, "timestamp": float}
 
-        :raises RobotsDisallowedError: robots.txt запрещает сканирование URL
         :raises RuntimeError: вызвано вне async with
         :raises PlaywrightError: ошибка загрузки страницы (таймаут, сеть и т.д.)
         """
@@ -79,9 +81,7 @@ class PlaywrightWrapper:
                 "PlaywrightWrapper не инициализирован — использовать как async with."
             )
 
-        if not await _robots_allowed(url):
-            raise RobotsDisallowedError(url)
-
+        robots_warning = not await _robots_allowed(url)
         domain = _extract_domain(url)
         await self._enforce_rate_limit(domain)
 
@@ -107,7 +107,7 @@ class PlaywrightWrapper:
             await context.close()
             self._last_request[domain] = time.time()
 
-        return html, network_log
+        return html, network_log, robots_warning
 
     async def _enforce_rate_limit(self, domain: str) -> None:
         """Задержка если с момента последнего запроса к домену прошло менее 2 секунд."""
