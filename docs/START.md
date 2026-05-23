@@ -53,22 +53,32 @@ https://github.com/kil4leo-design/152fz-audit
 
 **Дата обновления:** 2026-05-23 (сессия 10)
 
-**Завершены:** Этап 0, Этап 1, Этап 2 (полностью).
-Law Base MVP (A/B/C.yaml), BaseDetector, DetectorEngine, детекторы A1+B1+B2+B3+C1,
-PlaywrightWrapper (stealth mode, robots.txt Вариант B, WAF detection),
-Scanner, ReportEngine (JSON), FastAPI (POST /scan + GET /health + CORS),
-React UI (Vite + React 18), тесты 19/19.
+**Завершены:** Этап 0, Этап 1, Этап 2, большая часть Этапа 3.
 
-**Запуск продукта (два терминала):**
+Детекторы: A1, B1, B2, B3, C1 (19 тестов). C2 отключён (enabled: false).
+PlaywrightWrapper: stealth mode, robots.txt Вариант B, WAF detection.
+Report: violations + recommendations + passed + waf_blocked + blocked_excerpt.
+UI: все статусы отображаются — нарушения (красные), рекомендации (оранжевые),
+пройденные проверки (зелёные), WAF-блок (фиолетовый), robots_warning (синий).
+
+**Запуск продукта (два терминала, из корня проекта):**
 ```bash
 # Терминал 1 — API
-uvicorn api.main:app --reload
+cd /home/k/152fz-audit/152fz-audit && uvicorn api.main:app --reload
 
 # Терминал 2 — UI
-cd ui && npm run dev
+cd /home/k/152fz-audit/152fz-audit/ui && npm run dev
 # → http://localhost:5173
 ```
 
-**В работе:** Этап 3.
-**Следующий шаг:** C1 детектор + история проверок (модуль History).
-Подробно — в decisions.md раздел "Технические решения — сессия 9, 10".
+**Ветка:** dev. Всё запушено. Последний коммит: 21ef7fa.
+
+**Открытые вопросы:**
+- `docs/edge_cases.md` EC-1 — C1 на chipdip.ru: реальное нарушение или ложное срабатывание?
+  Требует исследования: отложенная загрузка аналитики, правоприменительная практика РКН.
+
+**Следующие задачи (Этап 3):**
+- Исследовать EC-1, при необходимости скорректировать C1
+- История проверок (модуль History)
+- Подготовка к онлайн-деплою
+- Документация для пользователя
