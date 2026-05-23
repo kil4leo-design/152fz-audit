@@ -31,6 +31,7 @@ class HtmlCookieBannerMissingDetector(BaseDetector):
     def detect(self, soup: BeautifulSoup, network_log: list[dict]) -> list[dict]:
         network_cfg = self.params.get("network_analysis", {})
         intercept_domains = network_cfg.get("intercept_domains", [])
+        data_collection_patterns = network_cfg.get("data_collection_patterns", [])
         analytics_signatures = self.params.get("analytics_signatures", [])
         banner_selectors = self.params.get("banner_selectors", [])
         banner_keywords = self.params.get("banner_keywords", [])
@@ -42,11 +43,24 @@ class HtmlCookieBannerMissingDetector(BaseDetector):
             return []
 
         if network_hits:
-            # Аналитика зафиксирована ДО взаимодействия пользователя — нарушение
-            return [self._build_result({
-                "detail": "Аналитика загружается до получения согласия пользователя",
+            data_hits = _filter_data_collection(network_hits, data_collection_patterns)
+            if data_hits:
+                # Реальный сбор данных зафиксирован ДО согласия — нарушение
+                return [self._build_result({
+                    "detail": "Аналитика активно собирает данные до получения согласия пользователя",
+                    "network_requests": data_hits,
+                })]
+            # Только загрузка скриптов — возможна отложенная инициализация (defer mode)
+            result = self._build_result({
+                "detail": (
+                    "Скрипты аналитики загружаются до согласия. "
+                    "Убедитесь, что инициализация счётчиков (ym('init', ...) и др.) "
+                    "выполняется только после получения согласия пользователя"
+                ),
                 "network_requests": network_hits,
-            })]
+            })
+            result["is_recommendation"] = True
+            return [result]
 
         # HTML-only путь (нет данных network_log, например в тестах)
         banner_present = _has_cookie_banner(soup, banner_selectors, banner_keywords)
@@ -68,6 +82,19 @@ class HtmlCookieBannerMissingDetector(BaseDetector):
         })
         result["is_recommendation"] = True
         return [result]
+
+
+def _filter_data_collection(urls: list[str], patterns: list[str]) -> list[str]:
+    """
+    Фильтрует URL по паттернам реального сбора данных.
+
+    Если patterns пустой — возвращает все urls (обратная совместимость: любой
+    domain hit считается нарушением).
+    Иначе возвращает только URLs, содержащие хотя бы один паттерн.
+    """
+    if not patterns:
+        return urls
+    return [url for url in urls if any(p in url for p in patterns)]
 
 
 def _match_network_domains(

@@ -114,6 +114,21 @@ violations:
             - "mixpanel.com"
             - "amplitude.com"
             - "cloudflareinsights.com"
+          # URL-паттерны реального сбора данных (не загрузка скрипта).
+          # Совпадение → нарушение. Только domain hit без совпадения → рекомендация
+          # (сайт может использовать отложенную инициализацию — defer mode).
+          # Без этого списка все domain hits считаются нарушением (обратная совместимость).
+          data_collection_patterns:
+            - "/watch/"                       # Яндекс.Метрика — просмотр страницы
+            - "/clmap/"                       # Яндекс.Метрика — тепловая карта кликов
+            - "mc.yandex.ru/pixel"            # Яндекс.Метрика — пиксель
+            - "/g/collect"                    # Google Analytics 4
+            - "google-analytics.com/collect"  # Universal Analytics
+            - "top-fwz1.mail.ru/counter"      # Mail.ru Top — счётчик просмотра
+            - "api.mixpanel.com/track"        # Mixpanel события
+            - "api.amplitude.com"             # Amplitude события
+            - "/cdn-cgi/rum"                  # Cloudflare Insights
+            - "analytics.tiktok.com/api"      # TikTok Pixel данные
     fix:
       summary: "Установить cookie-баннер с запросом согласия при первом визите"
       steps:
