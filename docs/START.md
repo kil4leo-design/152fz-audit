@@ -61,6 +61,8 @@ PlaywrightWrapper: stealth mode, robots.txt Вариант B, WAF detection.
 Report: violations + recommendations + passed + waf_blocked + blocked_excerpt.
 UI: все статусы отображаются — нарушения (красные), рекомендации (оранжевые),
 пройденные проверки (зелёные), WAF-блок (фиолетовый), robots_warning (синий).
+UI: подсказка про режим инкогнито под полем ввода URL.
+Disclaimer: фраза про инкогнито с объяснением причины.
 
 **Исправления сессии 11:**
 - C1: различает загрузку скрипта (рекомендация) и реальный сбор данных (нарушение). EC-1 закрыт.
@@ -75,10 +77,10 @@ cd /home/k/152fz-audit/152fz-audit && uvicorn api.main:app --reload
 
 # Терминал 2 — UI
 cd /home/k/152fz-audit/152fz-audit/ui && npm run dev
-# → http://localhost:5173
+# → http://localhost:5173 (если порт занят — 5174)
 ```
 
-**Ветка:** dev. Всё запушено. Последний коммит: 735f2b1.
+**Ветка:** dev. Всё запушено. Последний коммит: 1f2f884.
 
 **Открытые вопросы:**
 - `docs/edge_cases.md` EC-2 — B2 evidence не содержит matched_fields.
