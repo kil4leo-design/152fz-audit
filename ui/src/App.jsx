@@ -165,7 +165,7 @@ export default function App() {
         ФЗ «О персональных данных» (152-ФЗ, РФ)
       </p>
 
-      <form onSubmit={handleScan} style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+      <form onSubmit={handleScan} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         <input
           type="url"
           value={url}
@@ -193,6 +193,10 @@ export default function App() {
           {loading ? 'Проверяем...' : 'Проверить'}
         </button>
       </form>
+
+      <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20, marginTop: 0 }}>
+        Для сверки результатов открывайте сайт в режиме инкогнито — сканер работает без cookie, как при первом визите.
+      </p>
 
       {loading && (
         <div style={{ textAlign: 'center', color: '#6b7280', fontSize: 14, padding: '24px 0' }}>
