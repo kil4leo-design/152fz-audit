@@ -61,6 +61,7 @@ def test_b2_violation_no_consent_checkbox():
     assert result[0]["is_recommendation"] is False
     assert result[0]["evidence"]["form_index"] == 0
     assert result[0]["evidence"]["detail"] != ""
+    assert len(result[0]["evidence"]["matched_fields"]) > 0
 
 
 def test_b2_compliant_has_consent_checkbox():
@@ -81,6 +82,7 @@ def test_b2_alternative_consent_is_recommendation():
     assert result[0]["is_recommendation"] is True
     assert result[0]["evidence"]["form_index"] == 0
     assert result[0]["evidence"]["alternative_consent_text"] is not None
+    assert len(result[0]["evidence"]["matched_fields"]) > 0
 
 
 # ── B3 ────────────────────────────────────────────────────────────────────────
@@ -137,6 +139,7 @@ def test_b2_true_positive_name_field():
     """
     result = HtmlFormNoConsentDetector(_load_b2_config()).detect(_soup(html), [])
     assert len(result) == 1 and result[0]["id"] == "B2"
+    assert "name=name" in result[0]["evidence"]["matched_fields"]
 
 
 def test_b2_true_positive_first_name_field():
@@ -150,6 +153,7 @@ def test_b2_true_positive_first_name_field():
     """
     result = HtmlFormNoConsentDetector(_load_b2_config()).detect(_soup(html), [])
     assert len(result) == 1 and result[0]["id"] == "B2"
+    assert "name=first_name" in result[0]["evidence"]["matched_fields"]
 
 
 def test_b2_implicit_submit_button_alternative_consent():

@@ -39,7 +39,8 @@ class HtmlFormNoConsentDetector(BaseDetector):
 
         violations = []
         for form_index, form in enumerate(soup.find_all("form")):
-            if not _form_has_pd_fields(form, pd_fields, pd_input_types):
+            matched = _get_matched_pd_fields(form, pd_fields, pd_input_types)
+            if not matched:
                 continue
             if _form_has_consent_checkbox(form, consent_keywords, exclude_keywords):
                 continue
@@ -57,6 +58,7 @@ class HtmlFormNoConsentDetector(BaseDetector):
                     "form_index": form_index,
                     "detail": "Чекбокс согласия отсутствует; найдено альтернативное согласие в тексте кнопки",
                     "alternative_consent_text": alt,
+                    "matched_fields": matched,
                 })
                 result["is_recommendation"] = True
                 violations.append(result)
@@ -64,30 +66,39 @@ class HtmlFormNoConsentDetector(BaseDetector):
                 violations.append(self._build_result({
                     "form_index": form_index,
                     "detail": "Форма собирает персональные данные без чекбокса согласия",
+                    "matched_fields": matched,
                 }))
 
         return violations
 
 
-def _form_has_pd_fields(
+def _get_matched_pd_fields(
     form: Tag, pd_fields: list[str], pd_input_types: list[str]
-) -> bool:
-    """Возвращает True если форма содержит поля, собирающие персональные данные."""
+) -> list[str]:
+    """
+    Возвращает список дескрипторов полей ПДн найденных в форме.
+    Пустой список — форма не содержит полей ПДн.
+    Формат: "type=email", "name=phone", "placeholder=Ваш телефон".
+    """
     _skip_types = {"hidden", "submit", "button", "reset", "image"}
+    matched = []
     for inp in form.find_all("input"):
         input_type = (inp.get("type") or "text").lower()
         if input_type in _skip_types:
             continue
         if input_type in pd_input_types:
-            return True
+            matched.append(f"type={input_type}")
+            continue
         name = (inp.get("name") or "").lower()
         placeholder = (inp.get("placeholder") or "").lower()
         for f in pd_fields:
             if re.search(r'(?:^|[_\-])' + re.escape(f) + r'(?:[_\-]|$)', name):
-                return True
+                matched.append(f"name={inp.get('name')}")
+                break
             if f in placeholder:
-                return True
-    return False
+                matched.append(f"placeholder={inp.get('placeholder')}")
+                break
+    return matched
 
 
 def _form_has_consent_checkbox(

@@ -97,3 +97,12 @@
 ручную верификацию.
 
 ---
+
+**Решение (2026-05-24):** Закрыт. `matched_fields` добавлен в evidence B2.
+
+Формат: `["type=email", "name=phone", "placeholder=Ваш телефон"]`.
+`_form_has_pd_fields` заменена на `_get_matched_pd_fields` — возвращает список вместо bool.
+Список включается в evidence как для нарушения, так и для рекомендации (alternative_consent).
+Добавлены проверки matched_fields в тестах (26 тестов, все проходят).
+
+---
