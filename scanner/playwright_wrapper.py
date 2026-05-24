@@ -147,7 +147,19 @@ class PlaywrightWrapper:
             )
             response = await page.goto(url, wait_until="networkidle", timeout=30000)
             await page.wait_for_timeout(2000)
-            html = await page.content()
+            try:
+                html = await page.content()
+            except Exception as e:
+                if "navigating" in str(e).lower():
+                    # Страница продолжает навигировать (JS-редирект, SPA).
+                    # Ждём domcontentloaded — он срабатывает раньше networkidle.
+                    try:
+                        await page.wait_for_load_state("domcontentloaded", timeout=10000)
+                    except Exception:
+                        pass
+                    html = await page.content()
+                else:
+                    raise
         finally:
             await context.close()
             self._last_request[domain] = time.time()
