@@ -1,0 +1,220 @@
+# law_base/blocks/C.yaml — Блок В: Cookie и аналитика
+#
+# Источник штрафов: КонсультантПлюс, КоАП РФ ст. 13.11
+# Редакция: с учётом ФЗ-420 от 30.11.2024 (вступил в силу 30.05.2025)
+# Источник норм: 152-ФЗ «О персональных данных»
+#
+# Примечание по ИП: С 30.05.2025 ИП = юрлицо по ч.1 и ч.8 ст.13.11
+# (ИП не указаны отдельно в тексте закона).
+#
+# ВАЖНО: C1 и C2 требуют network_analysis через Playwright network interception.
+# Статический анализ HTML недостаточен — баннер может существовать,
+# но аналитика загружаться до нажатия «Принять». Без перехвата сети
+# детектор даёт недостоверный результат.
+#
+# Списки сигнатур требуют регулярного обновления по мере появления
+# новых аналитических сервисов. Дата последнего обновления указана ниже.
+# Дата верификации: 2026-05-17
+# Дата обновления сигнатур: 2026-05-17
+
+violations:
+
+  - id: "C1"
+    version: "1.1.0"
+    name: "Сбор аналитики и cookie без согласия пользователя"
+    block: "C"
+    enabled: true
+    severity: "critical"
+    is_recommendation: false
+    legal_ref:
+      law: "152-ФЗ"
+      article: "ст. 9"
+      description: "Cookie-файлы и счётчики аналитики собирают персональные данные (IP-адрес, идентификаторы устройства, история посещений). Их использование без согласия пользователя является обработкой ПДн без законного основания"
+    fine:
+      law: "КоАП РФ"
+      article: "ч.1 ст.13.11"
+      amounts:
+        individual: "10 000 – 15 000 руб."
+        official: "50 000 – 100 000 руб."
+        entrepreneur: "150 000 – 300 000 руб."
+        legal_entity: "150 000 – 300 000 руб."
+    detector:
+      method: "html_cookie_banner_missing"
+      params:
+        # Сигнатуры аналитики в HTML (статический анализ)
+        analytics_signatures:
+          # Яндекс
+          - "ym("
+          - "yandex_metrika"
+          - "_ym_"
+          - "mc.yandex.ru"
+          - "metrika.yandex.ru"
+          # Google
+          - "gtag("
+          - "google-analytics"
+          - "google-analytics.com"
+          - "googletagmanager.com"
+          - "google_analytics"
+          # VK / Mail.ru
+          - "top.mail.ru"
+          - "vk.com/js/api"
+          - "vk.com/js/script"
+          # TikTok
+          - "analytics.tiktok.com"
+          - "ttq."
+          # Другие
+          - "segment.io"
+          - "segment.com"
+          - "mixpanel.com"
+          - "amplitude.com"
+          - "cloudflareinsights.com"
+        # Селекторы для поиска баннера в DOM
+        banner_selectors:
+          - "#cookie-banner"
+          - "#cookie-consent"
+          - "#cookie-notice"
+          - ".cookie-banner"
+          - ".cookie-consent"
+          - ".cookie-notice"
+          - "[data-cookie]"
+          - "[data-consent]"
+          - "[data-gdpr]"
+          - "[data-cookie-policy]"
+          - "#consent"
+          - ".gdpr"
+          - "#gdpr"
+          - ".privacy-popup"
+          - "#privacy-popup"
+          - "#CybotCookiebotDialog"
+          - "#onetrust-consent-sdk"
+          - "#osano-cm"
+        # Ключевые слова в тексте баннера
+        banner_keywords:
+          - "cookie"
+          - "куки"
+          - "файлы cookie"
+          - "используем файлы"
+          - "файлы для идентификации"
+          - "используем технологии"
+          - "мы собираем"
+          - "согласие на обработку"
+          - "ваши данные"
+        # Network analysis (обязателен для достоверного результата)
+        # Проверяет фактическую загрузку аналитических запросов ДО согласия
+        network_analysis:
+          # Домены аналитики для перехвата сетевых запросов
+          intercept_domains:
+            - "google-analytics.com"
+            - "googletagmanager.com"
+            - "mc.yandex.ru"
+            - "metrika.yandex.ru"
+            - "top.mail.ru"
+            - "analytics.tiktok.com"
+            - "segment.io"
+            - "mixpanel.com"
+            - "amplitude.com"
+            - "cloudflareinsights.com"
+          # URL-паттерны реального сбора данных (не загрузка скрипта).
+          # Совпадение → нарушение. Только domain hit без совпадения → рекомендация
+          # (сайт может использовать отложенную инициализацию — defer mode).
+          # Без этого списка все domain hits считаются нарушением (обратная совместимость).
+          data_collection_patterns:
+            - "/watch/"                       # Яндекс.Метрика — просмотр страницы
+            - "/clmap/"                       # Яндекс.Метрика — тепловая карта кликов
+            - "mc.yandex.ru/pixel"            # Яндекс.Метрика — пиксель
+            - "/g/collect"                    # Google Analytics 4
+            - "google-analytics.com/collect"  # Universal Analytics
+            - "top-fwz1.mail.ru/counter"      # Mail.ru Top — счётчик просмотра
+            - "api.mixpanel.com/track"        # Mixpanel события
+            - "api.amplitude.com"             # Amplitude события
+            - "/cdn-cgi/rum"                  # Cloudflare Insights
+            - "analytics.tiktok.com/api"      # TikTok Pixel данные
+    fix:
+      summary: "Установить cookie-баннер с запросом согласия при первом визите"
+      steps:
+        - "Установить cookie-баннер, который отображается при первом посещении сайта"
+        - "Баннер должен содержать кнопку «Принять» И кнопку «Отклонить» или «Настроить» — только «Принять» недостаточно"
+        - "Аналитические счётчики должны активироваться ТОЛЬКО после нажатия «Принять»"
+        - "Выбор пользователя должен сохраняться и не запрашиваться повторно при следующих визитах"
+
+  # C2 отложен — требует анализа правоприменительной практики до включения.
+  # Обнаружение зарубежного домена в network_log ≠ нарушение локализации (ст. 18 ч.5):
+  # сервис может маршрутизировать данные через РФ-серверы, использовать server-side tagging
+  # или подпадать под исключения. Ложноположительный результат с штрафом 1–6 млн руб.
+  # является юридическим риском. Включить после верификации правоприменительной практики.
+  # Подробнее: docs/todo.md → "Юридические вопросы".
+  - id: "C2"
+    version: "1.1.0"
+    name: "Использование зарубежных счётчиков аналитики — нарушение локализации ПДн"
+    block: "C"
+    enabled: false
+    severity: "critical"
+    is_recommendation: false
+    legal_ref:
+      law: "152-ФЗ"
+      article: "ст. 18 ч.5"
+      description: "Первичное размещение персональных данных граждан РФ должно осуществляться на территории РФ. Передача данных зарубежным сервисам аналитики нарушает требование локализации"
+    fine:
+      law: "КоАП РФ"
+      article: "ч.8 ст.13.11"
+      amounts:
+        individual: "30 000 – 50 000 руб."
+        official: "100 000 – 200 000 руб."
+        entrepreneur: "1 000 000 – 6 000 000 руб."
+        legal_entity: "1 000 000 – 6 000 000 руб."
+    detector:
+      method: "html_foreign_analytics"
+      params:
+        # Статические сигнатуры в HTML
+        foreign_signatures:
+          # Google
+          - "google-analytics.com"
+          - "googletagmanager.com"
+          - "gtag("
+          - "google_analytics"
+          - "analytics.google.com"
+          - "doubleclick.net"
+          - "googleadservices.com"
+          # Facebook/Meta
+          - "connect.facebook.net"
+          - "fbq("
+          - "facebook.com/tr"
+          # Microsoft
+          - "clarity.ms"
+          # Hotjar
+          - "hotjar.com"
+          - "hotjar.io"
+          # Другие зарубежные
+          - "segment.io"
+          - "segment.com"
+          - "mixpanel.com"
+          - "amplitude.com"
+          - "intercom.io"
+          - "hubspot.com"
+          - "cloudflareinsights.com"
+          - "analytics.tiktok.com"
+        # Российские сервисы — исключения (не являются нарушением)
+        whitelist_signatures:
+          - "mc.yandex.ru"
+          - "metrika.yandex.ru"
+          - "top.mail.ru"
+          - "vk.com"
+          - "roistat.com"
+          - "calltouch.ru"
+          - "comagic.ru"
+        # Network analysis: перехват фактических запросов
+        # Ловит случаи проксирования через свой домен и server-side tagging
+        network_analysis:
+          enabled: true
+          intercept_foreign_requests: true
+          # Если запрос уходит на зарубежный домен — фиксируем как нарушение
+          # Если домен неизвестен — помечаем как warning для ручной проверки
+          uncertain_severity: "warning"
+          uncertain_message: "Обнаружен запрос к неизвестному домену, требуется ручная проверка"
+    fix:
+      summary: "Заменить зарубежные счётчики на российские аналоги"
+      steps:
+        - "Удалить с сайта Google Analytics, Facebook Pixel и другие зарубежные счётчики"
+        - "Установить российские аналоги: Яндекс Метрика, VK Pixel, Roistat, Calltouch — их серверы находятся в РФ"
+        - "Если зарубежный сервис необходим — подать уведомление в РКН о трансграничной передаче данных и получить разрешение"
+        - "Обновить Политику обработки ПДн — указать актуальный список используемых счётчиков"

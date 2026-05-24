@@ -1,0 +1,29 @@
+# Сканирование
+playwright==1.58.0
+
+# Парсинг HTML
+beautifulsoup4==4.12.3
+
+# API
+fastapi==0.111.0
+uvicorn==0.30.0
+httpx==0.28.1
+
+# Валидация схем
+pydantic==2.13.4
+
+# Конфиг / Law Base
+pyyaml==6.0.1
+
+# Law Monitor — мониторинг законов
+feedparser==6.0.11
+
+# БД
+sqlalchemy==2.0.30
+
+# Тесты
+pytest==7.4.4
+pytest-asyncio==0.23.7
+
+# Линтер
+ruff==0.4.4
