@@ -5,11 +5,12 @@ tests/detectors/test_block_a.py — Тесты детектора A1 (html_link_
 HTTP-проверки отключены (verify_accessible=False) — тестируем только HTML-логику.
 """
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 from bs4 import BeautifulSoup
 
-from scanner.detectors.html_link_search import HtmlLinkSearchDetector
+from scanner.detectors.html_link_search import HtmlLinkSearchDetector, _is_accessible, _verify_policy_page
 
 FIXTURES = Path(__file__).parent / "fixtures"
 LAW_BASE = Path(__file__).parent.parent.parent / "law_base" / "blocks"
@@ -43,3 +44,45 @@ def test_a1_compliant_with_link():
     result = HtmlLinkSearchDetector(_load_a1_config()).detect(_soup(html), [])
 
     assert result == []
+
+
+# ── Тесты HTTP-проверки (benefit of doubt при блокировке) ───────────────────
+
+def test_a1_is_accessible_404_returns_false():
+    """404 — страница не существует, считаем недоступной."""
+    params = {"min_status": 200, "max_status": 200}
+    with patch("httpx.Client") as mock_client:
+        mock_client.return_value.__enter__.return_value.get.return_value.status_code = 404
+        assert _is_accessible("https://example.com/privacy", params) is False
+
+
+def test_a1_is_accessible_429_returns_true():
+    """429 (rate limit) — сервер блокирует bot UA, не означает отсутствие страницы."""
+    params = {"min_status": 200, "max_status": 200}
+    with patch("httpx.Client") as mock_client:
+        mock_client.return_value.__enter__.return_value.get.return_value.status_code = 429
+        assert _is_accessible("https://example.com/privacy", params) is True
+
+
+def test_a1_is_accessible_exception_returns_true():
+    """Сетевая ошибка или таймаут — не означает отсутствие политики."""
+    params = {"min_status": 200, "max_status": 200}
+    with patch("httpx.Client") as mock_client:
+        mock_client.return_value.__enter__.return_value.get.side_effect = Exception("timeout")
+        assert _is_accessible("https://example.com/privacy", params) is True
+
+
+def test_a1_verify_policy_page_404_returns_false():
+    """404 при verify — политики нет, нарушение."""
+    params = {"min_status": 200, "max_status": 200, "content_keywords": [], "content_min_match": 1}
+    with patch("httpx.Client") as mock_client:
+        mock_client.return_value.__enter__.return_value.get.return_value.status_code = 404
+        assert _verify_policy_page("https://example.com/privacy", params) is False
+
+
+def test_a1_verify_policy_page_429_returns_true():
+    """429 при verify — benefit of doubt, не флагируем нарушение."""
+    params = {"min_status": 200, "max_status": 200, "content_keywords": [], "content_min_match": 1}
+    with patch("httpx.Client") as mock_client:
+        mock_client.return_value.__enter__.return_value.get.return_value.status_code = 429
+        assert _verify_policy_page("https://example.com/privacy", params) is True
