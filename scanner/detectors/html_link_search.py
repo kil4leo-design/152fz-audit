@@ -113,9 +113,9 @@ def _is_accessible(url: str, params: dict) -> bool:
     """
     Проверяет что URL возвращает статус в диапазоне [min_status, max_status].
 
-    404 → недоступна (нарушение).
-    429/5xx/исключение → неизвестно, считаем доступной (избегаем ложного срабатывания).
-    Сайты с rate limiting или WAF возвращают 429/403 на bot UA — не означает отсутствие политики.
+    Используется на шаге 3 (known_urls) — проверяет существование URL, которого
+    может не быть. Строгий режим: только точное попадание в диапазон = найдено.
+    Любая ошибка или неожиданный статус = не найдено (не путать с шагом 4).
     """
     min_s = params.get("min_status", 200)
     max_s = params.get("max_status", 200)
@@ -123,12 +123,9 @@ def _is_accessible(url: str, params: dict) -> bool:
         with httpx.Client(
             headers={"User-Agent": _UA}, follow_redirects=True, timeout=10
         ) as client:
-            status = client.get(url).status_code
-        if status == 404:
-            return False
-        return True  # 200 OK или заблокировано (429/403/5xx) — benefit of doubt
+            return min_s <= client.get(url).status_code <= max_s
     except Exception:
-        return True
+        return False
 
 
 def _verify_policy_page(url: str, params: dict) -> bool:

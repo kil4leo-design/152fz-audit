@@ -56,20 +56,26 @@ def test_a1_is_accessible_404_returns_false():
         assert _is_accessible("https://example.com/privacy", params) is False
 
 
-def test_a1_is_accessible_429_returns_true():
-    """429 (rate limit) — сервер блокирует bot UA, не означает отсутствие страницы."""
+def test_a1_is_accessible_429_returns_false():
+    """
+    429 на шаге 3 (known_urls) — URL не подтверждён как существующий.
+    _is_accessible строгий: только 200 = нашли. 429 = не нашли.
+    """
     params = {"min_status": 200, "max_status": 200}
     with patch("httpx.Client") as mock_client:
         mock_client.return_value.__enter__.return_value.get.return_value.status_code = 429
-        assert _is_accessible("https://example.com/privacy", params) is True
+        assert _is_accessible("https://example.com/privacy", params) is False
 
 
-def test_a1_is_accessible_exception_returns_true():
-    """Сетевая ошибка или таймаут — не означает отсутствие политики."""
+def test_a1_is_accessible_exception_returns_false():
+    """
+    Сетевая ошибка на шаге 3 (known_urls) — URL не подтверждён.
+    _is_accessible строгий: не смогли проверить = не нашли.
+    """
     params = {"min_status": 200, "max_status": 200}
     with patch("httpx.Client") as mock_client:
         mock_client.return_value.__enter__.return_value.get.side_effect = Exception("timeout")
-        assert _is_accessible("https://example.com/privacy", params) is True
+        assert _is_accessible("https://example.com/privacy", params) is False
 
 
 def test_a1_verify_policy_page_404_returns_false():
